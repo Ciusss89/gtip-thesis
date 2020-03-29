@@ -34,7 +34,7 @@ static struct ihb_node *find_canID(int can_id) {
 
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
-	const uint8_t MASTER = 8, IDLE = 4;
+	const uint8_t MASTER = 7, IDLE = 3;
 	struct canfd_frame frame;
 	struct ihb_node *ihb;
 
@@ -44,6 +44,10 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
 		fprintf(stdout, "configuring IHB node=%02x\n", ihb->canID);
 
+		/*
+		 * Send a RTR frame to the IHB, it determinates its role
+		 * by the DLC val.
+		 */
 		r = asprintf(&cmd, "%03x#R", ihb->canID);
 		if (r < 0) {
 			fprintf(stderr, "ihb_setup: asprintf fails");
@@ -58,6 +62,8 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 			 * into struct canfd_frame
 			 */
 			required_mtu = parse_canframe(cmd, &frame);
+
+			/* it becomes master */
 			frame.len = MASTER;
 
 			/* send frame */
@@ -77,6 +83,8 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 			 * into struct canfd_frame
 			 */
 			required_mtu = parse_canframe(cmd, &frame);
+
+			/* it becomes slave */
 			frame.len = IDLE;
 
 			/* send frame */
