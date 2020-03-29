@@ -10,7 +10,8 @@
 #define IHB_THREAD_HELP "ihb - can submodule, development branch"
 
 #define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1 s */
-#define RCV_TIMEOUT	(2000 * US_PER_MS)	/* socket rcv timeout */
+#define WAIT_100ms	(100LU * US_PER_MS)	/* delay of 1 s */
+#define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
 /*
  * MCU can have one or more CAN controllers, by default I use the
@@ -30,10 +31,18 @@ struct ihb_can_perph {
 	/* Device Identifier Number: number of can the controllers of the mcu */
 	uint8_t id;
 
-	/* CAN frame ID */
+	/* CAN frame ID, it's self assigned by  */
 	uint8_t frame_id;
 
+	/* if true the _thread_notify_node is running, its status showed by list
+	 * command.
+	 *
+	 * You can force it off by command notifyOFF
+	 */
 	bool status_notify_node;
+
+	/* If true the IHB assume the role to communicate with the HOST */
+	bool master;
 };
 
 enum ihb_states

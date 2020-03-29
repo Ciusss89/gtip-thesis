@@ -24,7 +24,7 @@
 #include "can/conn/isotp.h"
 #include "can/device.h"
 
-#define ENABLE_DEBUG    (1)
+#define ENABLE_DEBUG    (0)
 #include "debug.h"
 
 #include "ihbcan.h"
@@ -114,7 +114,6 @@ static void *_thread_notify_node(void *device)
 	 *
 	 * TODO! Pass the magic as configurable paramiter from the Makefile
 	 */
-
 	snd_frame->data[0] = 0x5F;
 	snd_frame->data[1] = 0x49;
 	snd_frame->data[2] = 0x48;
@@ -130,7 +129,7 @@ static void *_thread_notify_node(void *device)
 		return NULL;
 	}
 
-	filter->can_id = 0; /* fix me*/
+	filter->can_id = d->frame_id;
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	do {
@@ -138,40 +137,61 @@ static void *_thread_notify_node(void *device)
 		if (r < 0) {
 			printf("[E] _notify_node: error clearing filter = %d", r);
 			d->status_notify_node = false;
-			goto sock_close;
+			break;
 		}
 
 		r = conn_can_raw_send(&conn, snd_frame, 0);
 		if (r < 0) {
 			printf("[E] _notify_node: error sending the CAN frame: %d\n", r);
 			d->status_notify_node = false;
-			goto sock_close;
+			break;
 		}
 
 		r = conn_can_raw_set_filter(&conn, filter, 1);
 		if (r < 0) {
 			printf("[E] _notify_node: error setting filter = %d", r);
 			d->status_notify_node = false;
-			goto sock_close;
+			break;
 		}
 
+		xtimer_usleep(WAIT_100ms);
+
+		/*
+		 * Issue:
+		 * I would make true the next while only if the RTR bit is set,
+		 * but currently it enters also if the RTR is not set.
+		 */
 		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
 			 == sizeof(struct can_frame))) {
 
-			if(ENABLE_DEBUG) {
-				printf("ihbcan: ID=%02lx  DLC=[%x] ",
-						rcv_frame->can_id,
-						rcv_frame->can_dlc);
+			if(rcv_frame->can_dlc == 7) {
+				d->status_notify_node = false;
+				d->master = true;
+			} else if (rcv_frame->can_dlc == 3) {
+				d->status_notify_node = false;
+				d->master = false;
+			} else {
+				/*
+				 * This never should happen if:
+				 *  - the RTR bit is set
+				 *  - IHB are connected only to HOST.
+				 */
+				if(ENABLE_DEBUG) {
+					printf("ihbcan: ID=%02lx  DLC=[%x] DATA=",
+							rcv_frame->can_id,
+							rcv_frame->can_dlc);
 
-				for (int i = 0; i < rcv_frame->can_dlc; i++)
+					for (int i = 0; i < rcv_frame->can_dlc; i++)
 					printf(" %02X", rcv_frame->data[i]);
-        			puts("");
+					puts("");
+				}
+				puts("BUG: I received an unexpected frame, it has been ignored.");
 			}
 		}
 
-	} while ( d->status_notify_node);
+	DEBUG("_thread_notify_node: iter\n");
+	} while (d->status_notify_node);
 
-sock_close:
 	r = conn_can_raw_close(&conn);
 	if (r < 0)
 		printf("[E] _notify_node: error closing the CAN socket: %d\n", r);
@@ -179,7 +199,11 @@ sock_close:
 	free(snd_frame);
 	free(rcv_frame);
 
-	puts("has been termined");
+	if(r < 0)
+		puts("Notify phase fails");
+	else
+		printf("This node is: %s\n", d->master ? "MASTER" : "SLAVE");
+	
 	return NULL;
 }
 
@@ -191,11 +215,12 @@ int _ihb_can_handler(int argc, char **argv)
 		_usage();
 		return 1;
 	} else if (strncmp(argv[1], "list", 5) == 0) {
-		printf("ihb dev=%d name=%s mcu_id=%s, frame_id=%d notify=%s\n",
+		printf("ihb dev=%d name=%s mcu_id=%s, frame_id=%d role=%s notify=%s\n",
 			p->id,
 			p->name,
 			p->controller_uid,
 			p->frame_id,
+			p->master ? "master" : "idle",
 			p->status_notify_node ? "true" : "false");
 	} else if (strncmp(argv[1], "canON", 6) == 0) {
 		return _power_up(p->id);
