@@ -8,11 +8,6 @@
 #include "periph/gpio.h"
 #include "thread.h"
 
-#include "can/can.h"
-#include "can/conn/raw.h"
-#include "can/conn/isotp.h"
-#include "can/device.h"
-
 #ifdef MODULE_UPTIME
 #include "uptime/uptime.h"
 #endif
