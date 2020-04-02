@@ -3,17 +3,19 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+/* API's RIOT-OS */
 #include "shell.h"
 #include "board.h"
-#include "periph/gpio.h"
 #include "thread.h"
 
+/* custom usermodules */
 #ifdef MODULE_UPTIME
 #include "uptime/uptime.h"
 #endif
 
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"
+char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 #endif
 
 #ifdef MODULE_IHBCAN
@@ -42,7 +44,15 @@ int main(void)
 #endif
 
 #ifdef MODULE_IHBNETSIM
-	netsim_sk_init();
+	int pid_ihbnetsim = thread_create(skin_sim_stack,
+					  sizeof(skin_sim_stack),
+					  THREAD_PRIORITY_MAIN - 2,
+					  THREAD_CREATE_WOUT_YIELD,
+					  _skin_node_sim_thread,
+					  NULL, SK_THREAD_HELP);
+
+	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
+		puts("cannot create skin simulator thread");
 #endif
 
 #ifdef MODULE_IHBCAN
