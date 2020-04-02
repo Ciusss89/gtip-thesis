@@ -23,6 +23,7 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 static struct ihb_can_perph can_0;
 #endif
 
+/* Add custom tool to system shell */
 static const shell_command_t shell_commands[] = {
 #ifdef MODULE_UPTIME
 	{ "uptime", UPTIME_THREAD_HELP, _uptime_handler},
@@ -32,18 +33,24 @@ static const shell_command_t shell_commands[] = {
 #endif
 	{ NULL, NULL, NULL }
 };
-
 static char line_buf[SHELL_DEFAULT_BUFSIZE];
 
-int main(void)
+/**
+ * @ihb_init: start the ihb routine
+ *
+ * Return 0 if all is well, a negative number otherwise.
+ */
+static int ihb_init(void)
 {
-	int r = -1;
+	int r;
 
 #ifdef MODULE_UPTIME
+	puts("[*] MODULE_UPTIME");
 	uptime_thread_start();
 #endif
 
 #ifdef MODULE_IHBNETSIM
+	puts("[*] MODULE_IHBNETSIM");
 	int pid_ihbnetsim = thread_create(skin_sim_stack,
 					  sizeof(skin_sim_stack),
 					  THREAD_PRIORITY_MAIN - 2,
@@ -52,18 +59,28 @@ int main(void)
 					  NULL, SK_THREAD_HELP);
 
 	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
-		puts("cannot create skin simulator thread");
+		puts("[!] cannot create skin simulator thread");
 #endif
 
 #ifdef MODULE_IHBCAN
+	puts("[*] MODULE_IHBCAN");
 	r = _can_init(&can_0);
 	if (r != 0)
-		puts("_can_init: has failed\n");
+		puts("[!] _can_init: has failed");
 #endif
+
+	return r;
+}
+
+int main(void)
+{
+	if(ihb_init() < 0)
+		puts("[!] IHB: init of system has falied");
+
 
 	printf("RIOT-OS, MCU=%s Board=%s\n\r", RIOT_MCU, RIOT_BOARD);
 	shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
 
 	 /* should be never reached */
-	return r;
+	return 0;
 }
