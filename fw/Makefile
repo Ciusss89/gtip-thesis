@@ -26,6 +26,7 @@ USEMODULE += ps
 USEMODULE += conn_can
 USEMODULE += auto_init_can
 USEMODULE += can_pm
+USEMODULE += random
 
 FEATURES_REQUIRED += periph_can
 FEATURES_REQUIRED += periph_gpio_irq
@@ -42,6 +43,9 @@ DIRS += $(CURDIR)/uptime
 
 USEMODULE += ihbcan
 DIRS += $(CURDIR)/ihb-can
+
+USEMODULE += ihbnetsim
+DIRS += $(CURDIR)/ihb-netsim
 
 CFLAGS += -I$(CURDIR)
 include $(RIOTBASE)/Makefile.include

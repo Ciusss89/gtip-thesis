@@ -12,6 +12,10 @@
 #include "uptime/uptime.h"
 #endif
 
+#ifdef MODULE_IHBNETSIM
+#include "ihb-netsim/skin.h"
+#endif
+
 #ifdef MODULE_IHBCAN
 #include "ihb-can/ihbcan.h"
 static struct ihb_can_perph can_0;
@@ -35,6 +39,10 @@ int main(void)
 
 #ifdef MODULE_UPTIME
 	uptime_thread_start();
+#endif
+
+#ifdef MODULE_IHBNETSIM
+	netsim_sk_init();
 #endif
 
 #ifdef MODULE_IHBCAN
