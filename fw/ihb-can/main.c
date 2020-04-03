@@ -30,7 +30,7 @@
 #include "ihbcan.h"
 
 char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
-static int8_t pid_notify_node = -1;
+static kernel_pid_t pid_notify_node;
 
 struct ihb_can_perph *p;
 
@@ -95,7 +95,6 @@ static uint8_t _power_down(uint8_t ifnum)
 
 static void *_thread_notify_node(void *device)
 {
-
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
@@ -128,44 +127,59 @@ static void *_thread_notify_node(void *device)
 		return NULL;
 	}
 
+	/*
+	 * Setup the filter for rcv socket
+	 */
 	filter->can_id = d->frame_id;
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	do {
-		r = conn_can_raw_set_filter(&conn, NULL, 0);
-		if (r < 0) {
-			printf("[!] cannot remove filter from socket: err=%d", r);
-			d->status_notify_node = false;
-			break;
-		}
+		/*
+		 * The raw frame must be sent until the HOST doesn't discovery
+		 * me. When the HOST has assigned all roles to the IHBs nodes,
+		 * the not masters nodes have to switch to listening mode.
+		 */
+		if(d->status_notify_node) {
+			r = conn_can_raw_set_filter(&conn, NULL, 0);
+			if (r < 0) {
+				printf("[!] cannot remove filter from socket: err=%d", r);
+				d->status_notify_node = false;
+				break;
+			}
 
-		r = conn_can_raw_send(&conn, snd_frame, 0);
-		if (r < 0) {
-			printf("[!] error sending the CAN frame: err=%d\n", r);
-			d->status_notify_node = false;
-			break;
-		}
+			r = conn_can_raw_send(&conn, snd_frame, 0);
+			if (r < 0) {
+				printf("[!] error sending the CAN frame: err=%d\n", r);
+				d->status_notify_node = false;
+				break;
+			}
 
-		r = conn_can_raw_set_filter(&conn, filter, 1);
-		if (r < 0) {
-			printf("[!] cannot add the filter to the socket: err=%d", r);
-			d->status_notify_node = false;
-			break;
-		}
+			r = conn_can_raw_set_filter(&conn, filter, 1);
+			if (r < 0) {
+				printf("[!] cannot add the filter to the socket: err=%d", r);
+				d->status_notify_node = false;
+				break;
+			}
 
-		xtimer_usleep(WAIT_100ms);
+			xtimer_usleep(WAIT_100ms);
+		}
 
 		/*
 		 * Issue:
 		 * I would make true the next while only if the RTR bit is set,
 		 * but currently it enters also if the RTR is not set.
 		 */
-		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
+		while (((r = conn_can_raw_recv(&conn, rcv_frame,
+							d->status_notify_node ?
+							RCV_TIMEOUT : 0))
 			 == sizeof(struct can_frame))) {
 
 			if(rcv_frame->can_dlc == 7) {
 				d->status_notify_node = false;
 				d->master = true;
+				/*
+				 * WIP: Start DOWNLOAD OF THE DATA ?
+				 */
 			} else if (rcv_frame->can_dlc == 3) {
 				d->status_notify_node = false;
 				d->master = false;
@@ -173,7 +187,7 @@ static void *_thread_notify_node(void *device)
 				/*
 				 * This never should happen if:
 				 *  - the RTR bit is set
-				 *  - IHB are connected only to HOST.
+				 *  - IHB are connected only to the HOST.
 				 */
 				if(ENABLE_DEBUG) {
 					printf("[#] ihbcan: ID=%02lx  DLC=[%x] DATA=",
@@ -186,21 +200,25 @@ static void *_thread_notify_node(void *device)
 				}
 				puts("BUG: I received an unexpected frame, it has been ignored.");
 			}
+
+			printf("[*] This node is: %s\n", d->master ? "MASTER" : "SLAVE");
 		}
 
-	} while (d->status_notify_node);
+	/* Loop until any errors on the CAN APIs are detected */
+	} while (r >= 0);
 
 	r = conn_can_raw_close(&conn);
 	if (r < 0)
 		printf("[!] error closing the CAN socket: err=%d\n", r);
 
-	free(snd_frame);
-	free(rcv_frame);
+	if(snd_frame)
+		free(snd_frame);
+
+	if(rcv_frame)
+		free(rcv_frame);
 
 	if(r < 0)
-		puts("[!] Notify phase fails");
-	else
-		printf("[*] This node is: %s\n", d->master ? "MASTER" : "SLAVE");
+		puts("[!] Notify thread has passed away");
 	
 	return NULL;
 }
