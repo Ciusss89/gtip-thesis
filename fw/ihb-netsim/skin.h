@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* RIOT APIs */
-#include "thread.h"
-
 #define SK_THREAD_HELP	"skin simulator thread"
 
 #define SK_UPDATE_2000MS	(2000LU * US_PER_MS)	/* 2s */
