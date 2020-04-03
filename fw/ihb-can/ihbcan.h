@@ -28,6 +28,11 @@
 
 #define MAX_CPUID_LEN (16)
 
+/*
+ * IPC messages:
+ */
+#define CAN_MSG_START_ISOTP 0x400
+
 struct ihb_can_perph {
 	char controller_uid[MAX_CPUID_LEN * 2 + 1];
 	char name[CAN_NAME_LEN];

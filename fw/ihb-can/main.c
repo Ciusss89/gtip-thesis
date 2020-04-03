@@ -14,6 +14,7 @@
 #include "shell.h"
 #include "board.h"
 #include "thread.h"
+#include "msg.h"
 
 /* RIOT APIs */
 #include "periph/gpio.h"
@@ -23,6 +24,8 @@
 #include "can/conn/raw.h"
 #include "can/conn/isotp.h"
 #include "can/device.h"
+
+#define RECEIVE_THREAD_MSG_QUEUE_SIZE   (4)
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -34,8 +37,11 @@
 struct skin_node **sk;
 #endif
 
-char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
+static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
+
+static char send2host_stack[THREAD_STACKSIZE_MEDIUM];
+static kernel_pid_t pid_send2host;
 
 struct ihb_can_perph *p;
 
@@ -98,6 +104,32 @@ static uint8_t _power_down(uint8_t ifnum)
 	return 0;
 }
 
+static void *_thread_send2host(void *device)
+{
+	struct ihb_can_perph *d = (struct ihb_can_perph *)device;
+
+	msg_t msg, msg_queue[RECEIVE_THREAD_MSG_QUEUE_SIZE];
+
+	/* setup the device layers message queue */
+	msg_init_queue(msg_queue, RECEIVE_THREAD_MSG_QUEUE_SIZE);
+
+	while (1) {
+		msg_receive(&msg);
+		switch (msg.type) {
+			case CAN_MSG_START_ISOTP:
+				puts("------------WIP--------------");
+				printf("ALLA IS GOOD %d\n", d->frame_id );
+				break;
+			default:
+				puts("[!] received unknown message");
+				break;
+		}
+
+	}
+
+	return NULL;
+}
+
 static void *_thread_notify_node(void *device)
 {
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
@@ -105,6 +137,7 @@ static void *_thread_notify_node(void *device)
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
 	struct ihb_can_perph *d = (struct ihb_can_perph *)device;
 	conn_can_raw_t conn;
+	msg_t msg;
 	int r;
 
 	d->status_notify_node = true;
@@ -174,20 +207,23 @@ static void *_thread_notify_node(void *device)
 		 * I would make true the next while only if the RTR bit is set,
 		 * but currently it enters also if the RTR is not set.
 		 */
-		while (((r = conn_can_raw_recv(&conn, rcv_frame,
-							d->status_notify_node ?
-							RCV_TIMEOUT : 0))
+		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
 			 == sizeof(struct can_frame))) {
 
 			if(rcv_frame->can_dlc == 7) {
 				d->status_notify_node = false;
 				d->master = true;
-				/*
-				 * WIP: Start DOWNLOAD OF THE DATA ?
-				 */
+
+				msg.type = CAN_MSG_START_ISOTP;
+				msg_try_send(&msg, pid_send2host);
+
+				puts("[*] This node is MASTER");
+
 			} else if (rcv_frame->can_dlc == 3) {
 				d->status_notify_node = false;
 				d->master = false;
+
+				puts("[*] This node is SLAVE");
 			} else {
 				/*
 				 * This never should happen if:
@@ -205,29 +241,27 @@ static void *_thread_notify_node(void *device)
 				}
 				puts("BUG: I received an unexpected frame, it has been ignored.");
 			}
-
-			printf("[*] This node is: %s\n", d->master ? "MASTER" : "SLAVE");
 		}
 
-	/* Loop until any errors on the CAN APIs are detected */
-	} while (r >= 0);
+	/*
+	 * Loop until
+	 *  - no errors on the CAN APIs
+	 *  - node have to stay in listend mode
+	 */
+	} while (r >= 0 && (!d->master || d->status_notify_node));
 
 	r = conn_can_raw_close(&conn);
 	if (r < 0)
 		printf("[!] error closing the CAN socket: err=%d\n", r);
 
-	if(snd_frame)
-		free(snd_frame);
+	free(snd_frame);
+	free(rcv_frame);
 
-	if(rcv_frame)
-		free(rcv_frame);
+	if(r >= 0)
+		puts("[*] Notify thread has ended successfully");
 
-	if(r < 0)
-		puts("[!] Notify thread has passed away");
-	
 	return NULL;
 }
-
 
 int _ihb_can_handler(int argc, char **argv)
 {
@@ -265,6 +299,10 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 	uint8_t r = 1;
 	char *b;
 
+#ifdef MODULE_IHBNETSIM
+	sk = &in;
+#endif
+
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");
 	else
@@ -274,6 +312,8 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 		puts("[!] CPUID_LEN > MAX_CPUID_LEN");
 		return 1;
 	}
+
+	device->master = false;
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -305,11 +345,22 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 		return 1;
 	}
 
+	pid_send2host = thread_create(send2host_stack,
+				      sizeof(send2host_stack),
+				      THREAD_PRIORITY_MAIN - 2,
+				      THREAD_CREATE_WOUT_YIELD,
+				      _thread_send2host, (void *)device,
+				      "ihb send to host");
+	if(pid_send2host < KERNEL_PID_UNDEF) {
+		puts("[!] cannot create thread send to host");
+		return 1;
+	}
+
 	pid_notify_node = thread_create(notify_node_stack,
 					sizeof(notify_node_stack),
 					THREAD_PRIORITY_MAIN - 1,
 					THREAD_CREATE_WOUT_YIELD,
-					_thread_notify_node, (void*)device,
+					_thread_notify_node, (void *)device,
 					"ihb notify node");
 	if(pid_notify_node < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread notify node");
@@ -330,9 +381,6 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 	 * */
 
 	p = device;
-#ifdef MODULE_IHBNETSIM
-	sk = &in;
-#endif
 	puts("[*] IHB: init of the CAN subumodule success");
 	return 0;
 }
