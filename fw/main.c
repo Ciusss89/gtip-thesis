@@ -1,3 +1,8 @@
+/**
+ * Author:	Giuseppe Tipaldi
+ * Created:	2020
+ *
+ */
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,14 +64,14 @@ static int ihb_init(void)
 					  NULL, SK_THREAD_HELP);
 
 	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
-		puts("[!] cannot create skin simulator thread");
+		puts("[!] cannot start the skin simulator thread");
 #endif
 
 #ifdef MODULE_IHBCAN
 	puts("[*] MODULE_IHBCAN");
 	r = _can_init(&can_0);
 	if (r != 0)
-		puts("[!] _can_init: has failed");
+		puts("[!] init of the CAN submodule has failed");
 #endif
 
 	return r;

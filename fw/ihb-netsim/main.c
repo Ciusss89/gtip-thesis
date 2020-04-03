@@ -28,8 +28,8 @@ void *_skin_node_sim_thread(void *args)
 
 	uint8_t i, j, b;
 
-	printf("Skin node simulator: Nodes=%u Sensors per node=%u\n", SK_N_S,
-								      SK_T_S);
+	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n", SK_N_S,
+								      	  SK_T_S);
 
 	/* Initialize */
 	random_init(13);
@@ -45,7 +45,7 @@ void *_skin_node_sim_thread(void *args)
 				}
 		}
 
-		/* Printing to std breaks the timings */
+		/* Printing to stdout breaks the timings */
 		if (ENABLE_DEBUG) {
 			for(i = 0; i < SK_N_S; i++) {
 				DEBUG("[0x%04x] Tactiles: ", sk[i].address);
