@@ -45,23 +45,6 @@ struct ihb_can_perph {
 	bool master;
 };
 
-enum ihb_states
-{
-	IHB_IDLE,
-	IHB_NOTIFY,
-	IHB_READY,
-	IHB_SCAN,
-	IHB_BUSY,
-	IHB_RISEVATE,
-	IHB_RISERVATE1,
-	IHN_RISERVATE2,
-	IHB_RISERVATE3,
-	IHB_RISERVATE4,
-	IHB_ERR,
-	IHB_MAX_STATES
-};
-
-
 void oom(void);
 void *xmalloc(size_t size);
 char *data2str(const unsigned char *data, size_t len);
