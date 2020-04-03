@@ -20,12 +20,9 @@
 
 #include "skin.h"
 
-static struct skin_node sk[SK_N_S];
-
-void *_skin_node_sim_thread(void *args)
+void *_skin_node_sim_thread(void *in)
 {
-	(void)(args);
-
+	struct skin_node *sk = (struct skin_node *)in;
 	uint8_t i, j, b;
 
 	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n", SK_N_S,

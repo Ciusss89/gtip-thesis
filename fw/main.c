@@ -21,6 +21,7 @@
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"
 char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
+static struct skin_node skin_nodes[SK_N_S];
 #endif
 
 #ifdef MODULE_IHBCAN
@@ -61,7 +62,7 @@ static int ihb_init(void)
 					  THREAD_PRIORITY_MAIN - 2,
 					  THREAD_CREATE_WOUT_YIELD,
 					  _skin_node_sim_thread,
-					  NULL, SK_THREAD_HELP);
+					  (void *)&skin_nodes, SK_THREAD_HELP);
 
 	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
 		puts("[!] cannot start the skin simulator thread");
