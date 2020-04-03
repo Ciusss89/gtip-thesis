@@ -7,6 +7,10 @@
 #include "cpu_conf.h"
 #include "periph/cpuid.h"
 
+#ifdef MODULE_IHBNETSIM
+#include "ihb-netsim/skin.h"
+#endif
+
 #define IHB_THREAD_HELP "ihb - can submodule, development branch"
 
 #define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1 s */
@@ -50,6 +54,6 @@ void *xmalloc(size_t size);
 char *data2str(const unsigned char *data, size_t len);
 uint8_t fletcher8(const unsigned char * data, size_t n);
 
-int _can_init(struct ihb_can_perph *device);
+int _can_init(struct ihb_can_perph *device, struct skin_node sk[]);
 int _ihb_can_handler(int argc, char **argv);
 #endif

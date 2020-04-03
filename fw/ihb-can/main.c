@@ -29,6 +29,11 @@
 
 #include "ihbcan.h"
 
+#ifdef MODULE_IHBNETSIM
+#include "ihb-netsim/skin.h"
+struct skin_node **sk;
+#endif
+
 char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
 
@@ -253,7 +258,7 @@ int _ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-int _can_init(struct ihb_can_perph *device)
+int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 {
 	device = xmalloc(sizeof(struct ihb_can_perph));
 	uint8_t unique_id[CPUID_LEN];
@@ -325,6 +330,9 @@ int _can_init(struct ihb_can_perph *device)
 	 * */
 
 	p = device;
+#ifdef MODULE_IHBNETSIM
+	sk = &in;
+#endif
 	puts("[*] IHB: init of the CAN subumodule success");
 	return 0;
 }

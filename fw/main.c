@@ -70,7 +70,14 @@ static int ihb_init(void)
 
 #ifdef MODULE_IHBCAN
 	puts("[*] MODULE_IHBCAN");
-	r = _can_init(&can_0);
+	/*
+	 * TODO!
+	 * Issue: IHBCAN needs IHBNETSIM
+	 *
+	 * I don't like this, find a way to make this module indipend from
+	 * the module IHBNETSIM
+	 */
+	r = _can_init(&can_0, skin_nodes);
 	if (r != 0)
 		puts("[!] init of the CAN submodule has failed");
 #endif
