@@ -19,9 +19,6 @@
 /* SK_T_S: Skin Tactile sensors per skin node */
 #define SK_T_S (12u)
 
-/* SK_MSG_UPDATE: Update with randmon values the skin nodes */
-#define SK_MSG_UPDATE 0x400
-
 /**
  * @struct skin_node
  *
