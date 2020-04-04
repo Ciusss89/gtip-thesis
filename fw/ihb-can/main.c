@@ -25,7 +25,6 @@
 #include "can/conn/isotp.h"
 #include "can/device.h"
 
-#define RECEIVE_THREAD_MSG_QUEUE_SIZE   (4)
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -102,32 +101,6 @@ static uint8_t _power_down(uint8_t ifnum)
 	}
 
 	return 0;
-}
-
-static void *_thread_send2host(void *device)
-{
-	struct ihb_can_perph *d = (struct ihb_can_perph *)device;
-
-	msg_t msg, msg_queue[RECEIVE_THREAD_MSG_QUEUE_SIZE];
-
-	/* setup the device layers message queue */
-	msg_init_queue(msg_queue, RECEIVE_THREAD_MSG_QUEUE_SIZE);
-
-	while (1) {
-		msg_receive(&msg);
-		switch (msg.type) {
-			case CAN_MSG_START_ISOTP:
-				puts("------------WIP--------------");
-				printf("ALLA IS GOOD %d\n", d->frame_id );
-				break;
-			default:
-				puts("[!] received unknown message");
-				break;
-		}
-
-	}
-
-	return NULL;
 }
 
 static void *_thread_notify_node(void *device)

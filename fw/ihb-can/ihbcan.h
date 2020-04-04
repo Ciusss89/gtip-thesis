@@ -59,6 +59,8 @@ void *xmalloc(size_t size);
 char *data2str(const unsigned char *data, size_t len);
 uint8_t fletcher8(const unsigned char * data, size_t n);
 
+void *_thread_send2host(void *device);
+
 int _can_init(struct ihb_can_perph *device, struct skin_node sk[]);
 int _ihb_can_handler(int argc, char **argv);
 #endif
