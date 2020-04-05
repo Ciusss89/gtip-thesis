@@ -29,7 +29,7 @@
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
-#include "ihbcan.h"
+#include "can.h"
 
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"

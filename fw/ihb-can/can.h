@@ -13,6 +13,8 @@
 #include "ihb-netsim/skin.h"
 #endif
 
+#include "ihb.h"
+
 #define IHB_THREAD_HELP "ihb - can submodule, development branch"
 
 #define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1 s */

@@ -18,7 +18,7 @@
 
 #define RECEIVE_THREAD_MSG_QUEUE_SIZE   (4)
 
-#include "ihbcan.h"
+#include "can.h"
 
 void *_thread_send2host(void *device)
 {
