@@ -47,5 +47,8 @@ DIRS += $(CURDIR)/ihb-can
 USEMODULE += ihbnetsim
 DIRS += $(CURDIR)/ihb-netsim
 
+USEMODULE += ihbtools
+DIRS += $(CURDIR)/ihb-tools
+
 CFLAGS += -I$(CURDIR)
 include $(RIOTBASE)/Makefile.include

@@ -26,7 +26,7 @@ uint8_t fletcher8(const unsigned char * data, size_t n)
 
 void oom(void)
 {
-	puts("out of memory\n");
+	puts("[!] out of memory\n");
 }
 
 void *xmalloc(size_t size)

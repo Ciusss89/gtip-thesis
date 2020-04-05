@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ihb-tools/tools.h"
+
 #define SK_THREAD_HELP	"skin simulator thread"
 
 #define SK_UPDATE_2000MS	(2000LU * US_PER_MS)	/* 2s */

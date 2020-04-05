@@ -7,6 +7,8 @@
 #include "cpu_conf.h"
 #include "periph/cpuid.h"
 
+#include "ihb-tools/tools.h"
+
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"
 #endif
@@ -54,13 +56,8 @@ struct ihb_can_perph {
 	bool master;
 };
 
-void oom(void);
-void *xmalloc(size_t size);
-char *data2str(const unsigned char *data, size_t len);
-uint8_t fletcher8(const unsigned char * data, size_t n);
 
 void *_thread_send2host(void *device);
-
 int _can_init(struct ihb_can_perph *device, struct skin_node sk[]);
 int _ihb_can_handler(int argc, char **argv);
 #endif
