@@ -10,7 +10,7 @@
  */
 #define CAN_MSG_START_ISOTP 0x400
 
-void *_thread_send2host(void *device);
+void *_thread_send2host(void *IHB);
 int _can_init(struct ihb_structs *IHB);
 int _ihb_can_handler(int argc, char **argv);
 #endif

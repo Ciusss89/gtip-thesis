@@ -325,7 +325,7 @@ int _can_init(struct ihb_structs *IHB)
 				      sizeof(send2host_stack),
 				      THREAD_PRIORITY_MAIN - 2,
 				      THREAD_CREATE_WOUT_YIELD,
-				      _thread_send2host, (void *)can,
+				      _thread_send2host, (void *)IHB,
 				      "ihb send to host");
 	if(pid_send2host < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread send to host");
