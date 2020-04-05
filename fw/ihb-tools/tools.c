@@ -37,6 +37,14 @@ void *xmalloc(size_t size)
 	return p;
 }
 
+void *xcalloc(size_t nmemb, size_t size)
+{
+	void *p = nmemb && size ? calloc(nmemb, size) : malloc(1);
+	if (p == NULL)
+		oom();
+	return p;
+}
+
 char *data2str(const unsigned char *data, size_t len)
 {
 	char *r, *p;
