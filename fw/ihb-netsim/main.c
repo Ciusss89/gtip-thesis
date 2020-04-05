@@ -18,11 +18,26 @@
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
+#include "ihb-tools/tools.h"
 #include "skin.h"
+#include "ihb.h"
+
+#define SK_UPDATE_2000MS       (2000LU * US_PER_MS)    /* 2s */
+#define SK_UPDATE_0100MS       (100LU * US_PER_MS)     /* 100ms */
+#define SK_UPDATE_0005MS       (5LU * US_PER_MS)       /* 5ms */
+
+struct skin_node *sk;
 
 void *_skin_node_sim_thread(void *in)
 {
-	struct skin_node *sk = (struct skin_node *)in;
+	struct ihb_structs *IHB = (struct ihb_structs *)in;
+
+	sk = xcalloc(SK_N_S, sizeof(struct skin_node));
+	if(!sk)
+		return NULL;
+
+	*IHB->sk_nodes = sk;
+
 	uint8_t i, j, b;
 
 	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n", SK_N_S,

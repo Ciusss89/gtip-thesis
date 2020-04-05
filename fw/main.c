@@ -21,13 +21,15 @@
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"
 char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
-static struct skin_node skin_nodes[SK_N_S];
 #endif
 
 #ifdef MODULE_IHBCAN
 #include "ihb-can/can.h"
-static struct ihb_can_perph *can_0 = NULL;
 #endif
+
+#include "ihb.h"
+
+static struct ihb_structs IHB;
 
 /* Add custom tool to system shell */
 static const shell_command_t shell_commands[] = {
@@ -56,28 +58,23 @@ static int ihb_init(void)
 #endif
 
 #ifdef MODULE_IHBNETSIM
+	IHB.sk_nodes = NULL;
 	puts("[*] MODULE_IHBNETSIM");
 	int pid_ihbnetsim = thread_create(skin_sim_stack,
 					  sizeof(skin_sim_stack),
 					  THREAD_PRIORITY_MAIN - 2,
 					  THREAD_CREATE_WOUT_YIELD,
 					  _skin_node_sim_thread,
-					  (void *)&skin_nodes, SK_THREAD_HELP);
+					  (void *)&IHB, SK_THREAD_HELP);
 
 	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
 		puts("[!] cannot start the skin simulator thread");
 #endif
 
 #ifdef MODULE_IHBCAN
+	IHB.can = NULL;
 	puts("[*] MODULE_IHBCAN");
-	/*
-	 * TODO!
-	 * Issue: IHBCAN needs IHBNETSIM
-	 *
-	 * I don't like this, find a way to make this module indipend from
-	 * the module IHBNETSIM
-	 */
-	r = _can_init(&can_0, skin_nodes);
+	r = _can_init(&IHB);
 	if (r != 0)
 		puts("[!] init of the CAN submodule has failed");
 #endif
@@ -89,7 +86,6 @@ int main(void)
 {
 	if(ihb_init() < 0)
 		puts("[!] IHB: init of system has falied");
-
 
 	printf("RIOT-OS, MCU=%s Board=%s\n\r", RIOT_MCU, RIOT_BOARD);
 	shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);

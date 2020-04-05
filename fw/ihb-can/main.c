@@ -17,7 +17,7 @@
 #include "msg.h"
 
 /* RIOT APIs */
-#include "periph/gpio.h"
+#include "periph/cpuid.h"
 
 /* RIOT CAN APIs */
 #include "can/can.h"
@@ -25,16 +25,17 @@
 #include "can/conn/isotp.h"
 #include "can/device.h"
 
-
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
+#include "ihb-tools/tools.h"
 #include "can.h"
+#include "ihb.h"
 
-#ifdef MODULE_IHBNETSIM
-#include "ihb-netsim/skin.h"
-struct skin_node **sk;
-#endif
+#define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1 s */
+#define WAIT_100ms	(100LU * US_PER_MS)	/* delay of 1 s */
+#define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
+
 
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
@@ -266,7 +267,7 @@ int _ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-int _can_init(struct ihb_can_perph **dev, struct skin_node in[])
+int _can_init(struct ihb_structs *IHB)
 {
 	uint8_t unique_id[CPUID_LEN];
 	uint8_t r = 1;
@@ -276,11 +277,7 @@ int _can_init(struct ihb_can_perph **dev, struct skin_node in[])
 	if(!can)
 		return -1;
 
-	*dev = can;
-
-#ifdef MODULE_IHBNETSIM
-	sk = &in;
-#endif
+	*IHB->can = can;
 
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");
