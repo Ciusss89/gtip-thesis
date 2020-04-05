@@ -26,7 +26,7 @@ static struct skin_node skin_nodes[SK_N_S];
 
 #ifdef MODULE_IHBCAN
 #include "ihb-can/ihbcan.h"
-static struct ihb_can_perph can_0;
+static struct ihb_can_perph *can_0 = NULL;
 #endif
 
 /* Add custom tool to system shell */

@@ -42,7 +42,7 @@ static kernel_pid_t pid_notify_node;
 static char send2host_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_send2host;
 
-struct ihb_can_perph *p;
+struct ihb_can_perph *can;
 
 static void _usage(void)
 {
@@ -103,19 +103,20 @@ static uint8_t _power_down(uint8_t ifnum)
 	return 0;
 }
 
-static void *_thread_notify_node(void *device)
+static void *_thread_notify_node(void *arg)
 {
+	(void)arg;
+
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
-	struct ihb_can_perph *d = (struct ihb_can_perph *)device;
 	conn_can_raw_t conn;
 	msg_t msg;
 	int r;
 
-	d->status_notify_node = true;
+	can->status_notify_node = true;
 
-	snd_frame->can_id = d->frame_id;
+	snd_frame->can_id = can->frame_id;
 	snd_frame->can_dlc = 8;
 
 	/*
@@ -132,7 +133,7 @@ static void *_thread_notify_node(void *device)
 	snd_frame->data[6] = 0x56;
 	snd_frame->data[7] = 0x5F;
 
-	r = conn_can_raw_create(&conn, NULL, 0, d->id, 0);
+	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
 	if (r < 0) {
 		printf("[!] cannot create the CAN socket: err=%d\n", r);
 		return NULL;
@@ -141,7 +142,7 @@ static void *_thread_notify_node(void *device)
 	/*
 	 * Setup the filter for rcv socket
 	 */
-	filter->can_id = d->frame_id;
+	filter->can_id = can->frame_id;
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	do {
@@ -150,25 +151,25 @@ static void *_thread_notify_node(void *device)
 		 * me. When the HOST has assigned all roles to the IHBs nodes,
 		 * the not masters nodes have to switch to listening mode.
 		 */
-		if(d->status_notify_node) {
+		if(can->status_notify_node) {
 			r = conn_can_raw_set_filter(&conn, NULL, 0);
 			if (r < 0) {
 				printf("[!] cannot remove filter from socket: err=%d", r);
-				d->status_notify_node = false;
+				can->status_notify_node = false;
 				break;
 			}
 
 			r = conn_can_raw_send(&conn, snd_frame, 0);
 			if (r < 0) {
 				printf("[!] error sending the CAN frame: err=%d\n", r);
-				d->status_notify_node = false;
+				can->status_notify_node = false;
 				break;
 			}
 
 			r = conn_can_raw_set_filter(&conn, filter, 1);
 			if (r < 0) {
 				printf("[!] cannot add the filter to the socket: err=%d", r);
-				d->status_notify_node = false;
+				can->status_notify_node = false;
 				break;
 			}
 
@@ -184,8 +185,8 @@ static void *_thread_notify_node(void *device)
 			 == sizeof(struct can_frame))) {
 
 			if(rcv_frame->can_dlc == 7) {
-				d->status_notify_node = false;
-				d->master = true;
+				can->status_notify_node = false;
+				can->master = true;
 
 				msg.type = CAN_MSG_START_ISOTP;
 				msg_try_send(&msg, pid_send2host);
@@ -193,8 +194,8 @@ static void *_thread_notify_node(void *device)
 				puts("[*] This node is MASTER");
 
 			} else if (rcv_frame->can_dlc == 3) {
-				d->status_notify_node = false;
-				d->master = false;
+				can->status_notify_node = false;
+				can->master = false;
 
 				puts("[*] This node is SLAVE");
 			} else {
@@ -221,7 +222,7 @@ static void *_thread_notify_node(void *device)
 	 *  - no errors on the CAN APIs
 	 *  - node have to stay in listend mode
 	 */
-	} while (r >= 0 && (!d->master || d->status_notify_node));
+	} while (r >= 0 && (!can->master || can->status_notify_node));
 
 	r = conn_can_raw_close(&conn);
 	if (r < 0)
@@ -244,18 +245,18 @@ int _ihb_can_handler(int argc, char **argv)
 		return 1;
 	} else if (strncmp(argv[1], "list", 5) == 0) {
 		printf("[*] IHB dev=%d name=%s mcu_id=%s, frame_id=%d role=%s notify=%s\n",
-			p->id,
-			p->name,
-			p->controller_uid,
-			p->frame_id,
-			p->master ? "master" : "idle",
-			p->status_notify_node ? "true" : "false");
+			can->id,
+			can->name,
+			can->controller_uid,
+			can->frame_id,
+			can->master ? "master" : "idle",
+			can->status_notify_node ? "true" : "false");
 	} else if (strncmp(argv[1], "canON", 6) == 0) {
-		return _power_up(p->id);
+		return _power_up(can->id);
 	} else if (strncmp(argv[1], "canOFF", 7) == 0) {
-		return _power_down(p->id);
+		return _power_down(can->id);
 	} else if (strncmp(argv[1], "notifyOFF", 10) == 0) {
-		p->status_notify_node = false;
+		can->status_notify_node = false;
 		printf("ihb: terminate %d", pid_notify_node);
 	} else {
 		printf("unknown command: %s\n", argv[1]);
@@ -265,12 +266,17 @@ int _ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-int _can_init(struct ihb_can_perph *device, struct skin_node in[])
+int _can_init(struct ihb_can_perph **dev, struct skin_node in[])
 {
-	device = xmalloc(sizeof(struct ihb_can_perph));
 	uint8_t unique_id[CPUID_LEN];
 	uint8_t r = 1;
 	char *b;
+
+	can = xmalloc(sizeof(struct ihb_can_perph));
+	if(!can)
+		return -1;
+
+	*dev = can;
 
 #ifdef MODULE_IHBNETSIM
 	sk = &in;
@@ -286,7 +292,7 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 		return 1;
 	}
 
-	device->master = false;
+	can->master = false;
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -301,17 +307,17 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 	b = data2str(unique_id, CPUID_LEN);
 	
 	/* Save the MCU unique ID */
-	strcpy(device->controller_uid, b);
+	strcpy(can->controller_uid, b);
 	free(b);
 
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID
 	 * the fletcher8 hash function returns a not null value
 	 */
-	device->frame_id = fletcher8(unique_id, CPUID_LEN);
-	DEBUG("[*] CAN ID=%d\n", device->frame_id);
+	can->frame_id = fletcher8(unique_id, CPUID_LEN);
+	DEBUG("[*] CAN ID=%d\n", can->frame_id);
 
-	r = _scan_for_controller(device);
+	r = _scan_for_controller(can);
 	if(r != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
@@ -322,7 +328,7 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 				      sizeof(send2host_stack),
 				      THREAD_PRIORITY_MAIN - 2,
 				      THREAD_CREATE_WOUT_YIELD,
-				      _thread_send2host, (void *)device,
+				      _thread_send2host, (void *)can,
 				      "ihb send to host");
 	if(pid_send2host < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread send to host");
@@ -333,7 +339,7 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 					sizeof(notify_node_stack),
 					THREAD_PRIORITY_MAIN - 1,
 					THREAD_CREATE_WOUT_YIELD,
-					_thread_notify_node, (void *)device,
+					_thread_notify_node, NULL,
 					"ihb notify node");
 	if(pid_notify_node < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread notify node");
@@ -353,7 +359,6 @@ int _can_init(struct ihb_can_perph *device, struct skin_node in[])
 	 *
 	 * */
 
-	p = device;
 	puts("[*] IHB: init of the CAN subumodule success");
 	return 0;
 }

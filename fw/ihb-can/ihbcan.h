@@ -58,6 +58,6 @@ struct ihb_can_perph {
 
 
 void *_thread_send2host(void *device);
-int _can_init(struct ihb_can_perph *device, struct skin_node sk[]);
+int _can_init(struct ihb_can_perph **dev, struct skin_node sk[]);
 int _ihb_can_handler(int argc, char **argv);
 #endif
