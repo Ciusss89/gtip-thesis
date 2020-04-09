@@ -274,8 +274,6 @@ int _can_init(struct ihb_structs *IHB)
 	char *b;
 
 	can = xmalloc(sizeof(struct ihb_can_perph));
-	if(!can)
-		return -1;
 
 	*IHB->can = can;
 
