@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Riot API */
+#include "periph/pm.h"
+
 uint8_t fletcher8(const unsigned char * data, size_t n)
 {	
 	uint8_t sum = 0xff, sumB = 0xff;
@@ -27,6 +30,7 @@ uint8_t fletcher8(const unsigned char * data, size_t n)
 void oom(void)
 {
 	puts("[!] out of memory\n");
+	pm_reboot();
 }
 
 void *xmalloc(size_t size)
