@@ -23,8 +23,9 @@ USEMODULE += shell
 USEMODULE += shell_commands
 USEMODULE += ps
 
-USEMODULE += conn_can
 USEMODULE += auto_init_can
+USEMODULE += can_isotp
+USEMODULE += conn_can
 USEMODULE += can_pm
 USEMODULE += random
 
