@@ -86,7 +86,15 @@ void *_thread_send2host(void *in)
 							  can->id);
 				if(r < 0) {
 					printf("[!] cannot create the CAN socket: err=%d\n", r);
-				} else {
+					break;
+				} else if(r == 0) {
+
+					r = conn_can_isotp_bind(&conn, NULL);
+					if(r < 0) {
+						printf("[!] cannot bind the CAN socket: err=%d\n", r);
+						break;
+					}
+
 					sck_ready = true;
 					DEBUG("[#] The IS0-TP socket has been stared\n");
 				}
