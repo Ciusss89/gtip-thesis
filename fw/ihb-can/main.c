@@ -20,10 +20,9 @@
 #include "periph/cpuid.h"
 
 /* RIOT CAN APIs */
-#include "can/can.h"
 #include "can/conn/raw.h"
-#include "can/conn/isotp.h"
 #include "can/device.h"
+#include "can/can.h"
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
