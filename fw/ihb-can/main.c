@@ -36,7 +36,6 @@
 #define WAIT_100ms	(100LU * US_PER_MS)	/* delay of 1 s */
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
-
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
 
@@ -52,6 +51,7 @@ static void _usage(void)
 	puts("\tihbcan canON     - turn on can controller");
 	puts("\tihbcan canOFF    - turn off can controller");
 	puts("\tihbcan notifyOFF - teardown pid_notify_node");
+	puts("\tihbcan send2host - teardown notify, send isotp frame");
 }
 
 static int  _scan_for_controller(struct ihb_can_perph *device)
@@ -240,6 +240,7 @@ static void *_thread_notify_node(void *arg)
 
 int _ihb_can_handler(int argc, char **argv)
 {
+	msg_t msg;
 
 	if (argc < 2) {
 		_usage();
@@ -258,8 +259,18 @@ int _ihb_can_handler(int argc, char **argv)
 		return _power_down(can->id);
 	} else if (strncmp(argv[1], "notifyOFF", 10) == 0) {
 		can->status_notify_node = false;
-		printf("ihb: terminate %d", pid_notify_node);
-	} else {
+		printf("[*] ihb: terminate %d", pid_notify_node);
+	} else if (strncmp(argv[1], "send2host", 10) == 0) {
+		if(can->status_notify_node) {
+			can->status_notify_node = false;
+			msg.type = CAN_MSG_START_ISOTP;
+			msg_try_send(&msg, pid_send2host);
+			puts("[*] ihb: teardown notify, start the isotp socket");
+		}
+		msg.type = CAN_MSG_SEND_ISOTP;
+		msg_try_send(&msg, pid_send2host);
+		puts("[*] ihb: send istop...");
+	}  else {
 		printf("unknown command: %s\n", argv[1]);
 		return 1;
 	}
