@@ -43,25 +43,18 @@ void *_thread_send2host(void *in)
 		msg_receive(&msg);
 		switch (msg.type) {
 			case CAN_MSG_START_ISOTP:
-				puts("------------WIP--------------");
-				printf("TEST can-id=%d\n", can->frame_id);
-#ifdef MODULE_IHBNETSIM
-				if(ENABLE_DEBUG) {
-					puts("------------struct skin_node--------------");
-					for(uint8_t i = 0; i < SK_N_S; i++) {
-						DEBUG("[0x%04x] Tactiles: ", sk_nodes[i].address);
-						for(uint8_t j = 0; j < SK_T_S; j++)
-							DEBUG(" %d=%02x", j, sk_nodes[i].data[j]);
-						puts(" ");
-					}
-				}
-#endif
+				DEBUG("[#] The IS0-TP socket has been stared\n");
+				break;
+			case CAN_MSG_SEND_ISOTP:
+				DEBUG("[#] The IS0-TP message has been sent\n");
+				break;
+			case CAN_MSG_CLOSE_ISOTP:
+				DEBUG("[#] The IS0-TP socket has been closed\n");
 				break;
 			default:
 				puts("[!] received unknown message");
 				break;
 		}
-
 	}
 
 	return NULL;
