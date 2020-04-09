@@ -55,6 +55,7 @@ void *_thread_send2host(void *in)
 	struct isotp_options isotp_opt;
 	struct conn_can_isotp conn;
 	msg_t msg, msg_queue[RECEIVE_THREAD_MSG_QUEUE_SIZE];
+	bool sck_ready = false;
 	void *buff = NULL;
 	int r;
 
@@ -75,16 +76,27 @@ void *_thread_send2host(void *in)
 		msg_receive(&msg);
 		switch (msg.type) {
 			case CAN_MSG_START_ISOTP:
+
+				if(sck_ready)
+					break;
+
 				/* Start the IS0-TP socket */
 				r = conn_can_isotp_create(&conn,
 							  &isotp_opt,
 							  can->id);
-				if(r < 0)
+				if(r < 0) {
 					printf("[!] cannot create the CAN socket: err=%d\n", r);
+				} else {
+					sck_ready = true;
+					DEBUG("[#] The IS0-TP socket has been stared\n");
+				}
 
-				DEBUG("[#] The IS0-TP socket has been stared\n");
 				break;
 			case CAN_MSG_SEND_ISOTP:
+
+				if(!sck_ready)
+					break;
+
 				r = serialize(&buff);
 				if(r < 0) {
 					puts("[!] cannot serialize the struct\n");
@@ -107,12 +119,17 @@ void *_thread_send2host(void *in)
 				DEBUG("[#] The IS0-TP message has been sent\n");
 				break;
 			case CAN_MSG_CLOSE_ISOTP:
+
+				if(!sck_ready)
+					break;
+
 				/* Close the IS0-TP socket */
 				r = conn_can_isotp_close(&conn);
 				if(r < 0)
 					printf("[!] cannot close the CAN socket: err=%d\n", r);
 
 				DEBUG("[#] The IS0-TP socket has been closed\n");
+				sck_ready = false;
 				break;
 			default:
 				puts("[!] received unknown message");
