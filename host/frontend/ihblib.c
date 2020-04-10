@@ -21,6 +21,7 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/can/isotp.h>
 
 #include "ihb.h"
 #include "lib.h"
@@ -216,7 +217,56 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
 
 	if (r < 0) {
-		fprintf(stderr, "biond has failed: %s\n", strerror(errno));
+		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		return -errno;
+	}
+
+	return r;
+}
+
+int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
+{
+	static struct can_isotp_fc_options fcopts;
+	static struct can_isotp_options opts;
+	struct sockaddr_can addr;
+
+	int r;
+
+	/*
+	 * !TODO: add tuning of the fc options:
+	 *
+	 * fcopts.bs =
+	 * fcopts.stmin =
+	 * fcopts.wftmax =
+	 */
+
+	*can_soc_fd = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP);
+	if (*can_soc_fd < 0) {
+		fprintf(stderr, "socket open failure! %s\n", strerror(errno));
+		return -errno;
+	}
+
+	setsockopt(*can_soc_fd,
+		   SOL_CAN_ISOTP,
+		   CAN_ISOTP_OPTS,
+		   &opts,
+		   sizeof(opts));
+
+	setsockopt(*can_soc_fd,
+		   SOL_CAN_ISOTP,
+		   CAN_ISOTP_RECV_FC,
+		   &fcopts,
+		   sizeof(fcopts));
+
+	addr.can_family = AF_CAN;
+	addr.can_ifindex = if_nametoindex(d);
+	addr.can_addr.tp.tx_id = dest;
+	addr.can_addr.tp.rx_id = 0x0;
+
+	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
+
+	if (r < 0) {
+		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
 

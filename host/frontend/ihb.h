@@ -25,6 +25,11 @@ int ihb_setup(int s, uint8_t c_id_master, bool v);
 /*
  *
  */
+int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest);
+
+/*
+ *
+ */
 int ihb_init_socket_can(int *can_soc_fd, const char *d);
 
 /*
