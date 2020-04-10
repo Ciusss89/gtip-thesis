@@ -32,21 +32,20 @@ const size_t nmemb = sizeof(struct skin_node);
 const size_t buff_l = SK_N_S * nmemb;
 #endif
 
-static int serialize(void **obj)
+static void serialize(void **obj)
 {
-	uint8_t i;
 	void *p;
 
+	/*
+	 * Pay attention to memory consuming...
+	 */
 	p = xcalloc(SK_N_S, nmemb);
 
-	for(i = 0; i < SK_N_S; i++)
-		memcpy(p + (i * nmemb), sk_nodes, nmemb);
+	memcpy(p, sk_nodes, buff_l);
 
 	DEBUG("[#] serialized, obj=%ubytes, nmemb=%ubytes\n", buff_l, nmemb);
 
 	*obj = p;
-
-	return 0;
 }
 
 void *_thread_send2host(void *in)
@@ -105,11 +104,7 @@ void *_thread_send2host(void *in)
 				if(!sck_ready)
 					break;
 
-				r = serialize(&buff);
-				if(r < 0) {
-					puts("[!] cannot serialize the struct\n");
-					break;
-				}
+				serialize(&buff);
 
 				r = conn_can_isotp_send(&conn, buff, buff_l, 0);
 				if(r < 0) {
