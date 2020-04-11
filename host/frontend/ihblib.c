@@ -220,6 +220,9 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
 
 	if (r < 0) {
+		shutdown(*can_soc_fd, 2);
+		close(*can_soc_fd);
+
 		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
@@ -269,6 +272,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
 
 	if (r < 0) {
+		shutdown(*can_soc_fd, 2);
+		close(*can_soc_fd);
 		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
@@ -311,6 +316,8 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 		}
 
 		free(p);
+
+		printf("--%s\n", running ? "TRUE": "FALSE");
 
 	} while (running);
 

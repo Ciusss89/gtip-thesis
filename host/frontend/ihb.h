@@ -20,6 +20,8 @@ struct ihb_node {
 
 static struct ihb_node *ihbs = NULL;
 
+bool running;
+
 int ihb_setup(int s, uint8_t c_id_master, bool v);
 
 /*

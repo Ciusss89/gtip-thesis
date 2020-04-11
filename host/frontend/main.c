@@ -15,8 +15,6 @@
 
 #include "ihb.h"
 
-static bool running = true;
-
 void help(char *prg)
 {
 	fprintf(stdout, "\nUsage: %s [options] -d CAN interface\n", prg);
@@ -95,39 +93,44 @@ int main(int argc, char **argv)
 	/* Open and inizializate the socket CAN */
 	r = ihb_init_socket_can(&can_soc_raw, perph);
 	if (r < 0)
-		goto err_init;
+		goto _fail;
 
 	/* Start discovery of the nodes */
 	r = ihb_discovery(can_soc_raw, verbose, &master_id, &ihb_nodes);
 	if (r < 0)
-		goto  err_discovery;
+		goto _free_list;
 
 	if(ihb_nodes != 0)
 		fprintf(stdout, "Network size %d. IHB master candidate = %02x\n",
 				ihb_nodes, master_id);
+	else
+		goto _fail;
 
 	/* Start the setup of the nodes */
 	r = ihb_setup(can_soc_raw, master_id, verbose);
 	if (r < 0)
-		goto  err_setup;
+		goto  _free_list;
 
 	 /* Open and inizializate the socket CAN ISO-TP */
 	r = ihb_init_socket_can_isotp(&can_soc_isotp, perph, master_id);
 	if (r < 0)
-		 goto  err_setup;
+		 goto  _free_list;
 
 	r = ihb_rcv_data(can_soc_isotp, &data, verbose);
 
-err_2:
+
 	HASH_CLEAR(hh,ihbs);
 
-err_discovery:
 	shutdown(can_soc_isotp, 2);
 	close(can_soc_isotp);
 
-err_init:
 	shutdown(can_soc_raw, 2);
 	close(can_soc_raw);
+
+_free_list:
+	HASH_CLEAR(hh,ihbs);
+
+_fail:
 
 	return r;
 }
