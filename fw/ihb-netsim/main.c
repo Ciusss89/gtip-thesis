@@ -33,8 +33,6 @@ void *_skin_node_sim_thread(void *in)
 	struct ihb_structs *IHB = (struct ihb_structs *)in;
 
 	sk = xcalloc(SK_N_S, sizeof(struct skin_node));
-	if(!sk)
-		return NULL;
 
 	*IHB->sk_nodes = sk;
 
