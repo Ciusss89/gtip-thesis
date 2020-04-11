@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include <net/if.h>
 
@@ -118,8 +119,32 @@ int main(int argc, char **argv)
 	if (r < 0)
 		 goto  _free_list;
 
-	r = ihb_rcv_data(can_soc_isotp, &data, verbose);
+	while (running && ihb_nodes > 0) {
+		r = ihb_rcv_data(can_soc_isotp, &data, verbose);
 
+		/* If the IHB goes in timeout, it has passed away */
+		if(r == -ETIMEDOUT) {
+			// !TODO Add logic
+			//  1. to search new candidate
+			//  2. to configure new candidate
+		} else {
+			/* The Fault mechanism covers only ETIMEDOUT */
+			break;
+		}
+
+		ihb_nodes--;
+		fprintf(stdout, "Network size %d. IHB master candidate = %02x\n",
+				ihb_nodes, master_id);
+	
+		/* Close old socket */
+		shutdown(can_soc_isotp, 2);
+		close(can_soc_isotp);
+
+		 /* Open and inizializate the socket CAN ISO-TP */
+		r = ihb_init_socket_can_isotp(&can_soc_isotp, perph, master_id);
+		if (r < 0)
+			 running = false;
+	}
 
 	HASH_CLEAR(hh,ihbs);
 

@@ -298,7 +298,6 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 	const size_t buff_l = SK_N_S * nmemb;
-	bool isotp_run = true;
 	int r, i, j, nbytes;
 	void *p = NULL;
 	fd_set rdfs;
@@ -314,14 +313,13 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 
 		if (r < 0) {
 			fprintf(stderr, "socket not ready: %s\n", strerror(errno));
-			isotp_run = false;
-			continue;
+			break;
 		}
 
 		if (r == 0) {
 			fprintf(stdout, "IHB failure detected: the timeout is over\n");
-			isotp_run = false;
-			continue;
+			r = -ETIMEDOUT;
+			break;
 		}
 
 		if (FD_ISSET(fd, &rdfs)) {
@@ -358,8 +356,8 @@ _short_rcv:
 			free(p);
 		}
 
-	} while (running && isotp_run);
+	} while (running);
 
 	puts("receive is ended.");
-	return 0;
+	return r;
 }
