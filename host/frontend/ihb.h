@@ -37,4 +37,9 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d);
  */
 int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes);
 
+/*
+ *
+ */
+int ihb_rcv_data(int can_soc_fd, void **ptr, bool v);
+
 #endif

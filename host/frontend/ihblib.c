@@ -24,7 +24,10 @@
 #include <linux/can/isotp.h>
 
 #include "ihb.h"
+#include "skin.h"
 #include "lib.h"
+
+#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
 
 static struct ihb_node *find_canID(int can_id) {
 	struct ihb_node *s;
@@ -271,4 +274,46 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 	}
 
 	return r;
+}
+
+int ihb_rcv_data(int fd, void **ptr, bool v)
+{
+	const size_t nmemb = sizeof(struct skin_node);
+	static struct skin_node *sk_nodes = NULL;
+	const size_t buff_l = SK_N_S * nmemb;
+	void *p = NULL;
+	int i, j, nbytes;
+
+	do {
+		p = calloc(SK_N_S, nmemb);
+		if(!p){
+			fprintf(stderr, "calloc fails\n");
+			return -1;
+		}
+
+		nbytes = read(fd, p, buff_l);
+
+		if(nbytes != buff_l) {
+			puts("short rcv");
+			continue;
+		}
+
+		sk_nodes = (struct skin_node *)p;
+
+		if(v) {
+			for(i = 0; i < SK_N_S; i++) {
+				printf("%d [%#x] TS: ",i, sk_nodes[i].address);
+				for(j = 0; j < SK_T_S; j++)
+					printf(" %02x", sk_nodes[i].data[j]);
+				printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
+			}
+			puts("-------------------------------------------------------------------------------");
+		}
+
+		free(p);
+
+	} while (running);
+
+	puts("receive is ended.");
+	return 0;
 }
