@@ -252,17 +252,29 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 		return -errno;
 	}
 
-	setsockopt(*can_soc_fd,
-		   SOL_CAN_ISOTP,
-		   CAN_ISOTP_OPTS,
-		   &opts,
-		   sizeof(opts));
+	r = setsockopt(*can_soc_fd,
+		       SOL_CAN_ISOTP,
+		       CAN_ISOTP_OPTS,
+		       &opts,
+		       sizeof(opts));
+	if (r < 0) {
+		shutdown(*can_soc_fd, 2);
+		close(*can_soc_fd);
+		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		return -errno;
+	}
 
-	setsockopt(*can_soc_fd,
-		   SOL_CAN_ISOTP,
-		   CAN_ISOTP_RECV_FC,
-		   &fcopts,
-		   sizeof(fcopts));
+	r = setsockopt(*can_soc_fd,
+		       SOL_CAN_ISOTP,
+		       CAN_ISOTP_RECV_FC,
+		       &fcopts,
+		       sizeof(fcopts));
+	if (r < 0) {
+		shutdown(*can_soc_fd, 2);
+		close(*can_soc_fd);
+		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		return -errno;
+	}
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(d);
