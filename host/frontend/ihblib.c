@@ -298,42 +298,67 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 	const size_t buff_l = SK_N_S * nmemb;
+	bool isotp_run = true;
+	int r, i, j, nbytes;
 	void *p = NULL;
-	int i, j, nbytes;
+	fd_set rdfs;
 
 	i = 0;
 
 	do {
-		p = calloc(SK_N_S, nmemb);
-		if(!p){
-			fprintf(stderr, "calloc fails\n");
-			return -1;
-		}
+		struct timeval timeout_config = { 5, 0 };
+		FD_ZERO(&rdfs);
+		FD_SET(fd, &rdfs);
 
-		nbytes = read(fd, p, buff_l);
+		r = select(fd + 1, &rdfs, NULL, NULL, &timeout_config);
 
-		if(nbytes != buff_l) {
-			puts("short rcv");
+		if (r < 0) {
+			fprintf(stderr, "socket not ready: %s\n", strerror(errno));
+			isotp_run = false;
 			continue;
 		}
 
-		sk_nodes = (struct skin_node *)p;
-
-		if(v) {
-			for(i = 0; i < SK_N_S; i++) {
-				printf("%d [%#x] TS: ",i, sk_nodes[i].address);
-				for(j = 0; j < SK_T_S; j++)
-					printf(" %02x", sk_nodes[i].data[j]);
-				printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
-			}
-			puts("-------------------------------------------------------------------------------");
+		if (r == 0) {
+			fprintf(stdout, "IHB failure detected: the timeout is over\n");
+			isotp_run = false;
+			continue;
 		}
 
-		printf("\rIHB data has been received, chunk=%lubytes iter=%d", buff_l, i++);
+		if (FD_ISSET(fd, &rdfs)) {
+			p = calloc(SK_N_S, nmemb);
+			if(!p){
+				fprintf(stderr, "calloc fails\n");
+				return -1;
+			}
 
-		free(p);
+			nbytes = read(fd, p, buff_l);
 
-	} while (running);
+			if(nbytes != buff_l) {
+				puts("");
+				goto _short_rcv;
+			}
+
+			sk_nodes = (struct skin_node *)p;
+
+			i++;
+
+			if(v) {
+				puts("-----------------------------------DEBUG---------------------------------------");
+				for(i = 0; i < SK_N_S; i++) {
+					printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
+					for(j = 0; j < SK_T_S; j++)
+						printf(" %02x", sk_nodes[i].data[j]);
+					printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
+				}
+				puts("-------------------------------------------------------------------------------");
+			}
+
+			printf("\rIHB data has been received, chunk=%lubytes iter=%d", buff_l, i);
+_short_rcv:
+			free(p);
+		}
+
+	} while (running && isotp_run);
 
 	puts("receive is ended.");
 	return 0;
