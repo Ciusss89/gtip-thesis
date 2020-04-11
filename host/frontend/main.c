@@ -51,8 +51,12 @@ int main(int argc, char **argv)
 	uint8_t master_id = 255, ihb_nodes = 0;
 	bool verbose = false;
 	char *perph = NULL;
-	int can_soc_fd = 0;
-	int c, r;
+	int can_soc_raw = 0;
+	int can_soc_isotp = 0;
+	int c, r = 0;
+	void *data;
+
+	running = true;
 
 	signal(SIGTERM, _signals);
 	signal(SIGHUP, _signals);
@@ -89,12 +93,12 @@ int main(int argc, char **argv)
 	}
 
 	/* Open and inizializate the socket CAN */
-	r = ihb_init_socket_can(&can_soc_fd, perph);
+	r = ihb_init_socket_can(&can_soc_raw, perph);
 	if (r < 0)
 		goto err_init;
 
 	/* Start discovery of the nodes */
-	r = ihb_discovery(can_soc_fd, verbose, &master_id, &ihb_nodes);
+	r = ihb_discovery(can_soc_raw, verbose, &master_id, &ihb_nodes);
 	if (r < 0)
 		goto  err_discovery;
 
@@ -103,28 +107,27 @@ int main(int argc, char **argv)
 				ihb_nodes, master_id);
 
 	/* Start the setup of the nodes */
-	//struct canfd_frame frame;
-	//int required_mtu;
-	//required_mtu = parse_canframe(perph, &frame);
-	r = ihb_setup(can_soc_fd, master_id, verbose);
+	r = ihb_setup(can_soc_raw, master_id, verbose);
 	if (r < 0)
 		goto  err_setup;
 
-	/*
-	 * NEXT STEP,
-	 *   
-	 *   master_id send MASTER REQUEST.
-	 *
-	 *
-	 * */
+	 /* Open and inizializate the socket CAN ISO-TP */
+	r = ihb_init_socket_can_isotp(&can_soc_isotp, perph, master_id);
+	if (r < 0)
+		 goto  err_setup;
 
-err_setup:
+	r = ihb_rcv_data(can_soc_isotp, &data, verbose);
+
+err_2:
 	HASH_CLEAR(hh,ihbs);
 
 err_discovery:
+	shutdown(can_soc_isotp, 2);
+	close(can_soc_isotp);
 
 err_init:
-	close(can_soc_fd);
+	shutdown(can_soc_raw, 2);
+	close(can_soc_raw);
 
 	return r;
 }
