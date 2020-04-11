@@ -100,11 +100,13 @@ int main(int argc, char **argv)
 	if (r < 0)
 		goto _free_list;
 
-	if(ihb_nodes != 0)
+	if(ihb_nodes != 0) {
 		fprintf(stdout, "Network size %d. IHB master candidate = %02x\n",
 				ihb_nodes, master_id);
-	else
+	} else {
+		puts("IHBs not found");
 		goto _fail;
+	}
 
 	/* Start the setup of the nodes */
 	r = ihb_setup(can_soc_raw, master_id, verbose);

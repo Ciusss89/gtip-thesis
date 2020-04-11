@@ -118,7 +118,7 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 	int r, i;
 
 
-	while (discovery) {
+	while (discovery && running) {
 		FD_ZERO(&rdfs);
 		FD_SET(fd, &rdfs);
 
@@ -289,6 +289,8 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	void *p = NULL;
 	int i, j, nbytes;
 
+	i = 0;
+
 	do {
 		p = calloc(SK_N_S, nmemb);
 		if(!p){
@@ -315,9 +317,9 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 			puts("-------------------------------------------------------------------------------");
 		}
 
-		free(p);
+		printf("\rIHB data has been received, chunk=%lubytes iter=%d", buff_l, i++);
 
-		printf("--%s\n", running ? "TRUE": "FALSE");
+		free(p);
 
 	} while (running);
 
