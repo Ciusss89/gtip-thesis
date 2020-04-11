@@ -59,9 +59,9 @@ void *_thread_send2host(void *in)
 	int r;
 
 	/* Saves the pointer of structs */
-	sk_nodes = *IHB->sk_nodes;
+	sk_nodes = IHB->sk_nodes;
 #ifdef MODULE_IHBNETSIM
-	can = *IHB->can;
+	can = IHB->can;
 #endif
 	/* setup the device layers message queue */
 	msg_init_queue(msg_queue, RECEIVE_THREAD_MSG_QUEUE_SIZE);

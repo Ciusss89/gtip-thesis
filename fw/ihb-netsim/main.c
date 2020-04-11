@@ -34,7 +34,7 @@ void *_skin_node_sim_thread(void *in)
 
 	sk = xcalloc(SK_N_S, sizeof(struct skin_node));
 
-	*IHB->sk_nodes = sk;
+	IHB->sk_nodes = sk;
 
 	uint8_t i, j, b;
 

@@ -277,7 +277,7 @@ int _can_init(struct ihb_structs *IHB)
 
 	can = xmalloc(sizeof(struct ihb_can_perph));
 
-	*IHB->can = can;
+	IHB->can = can;
 
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");

@@ -73,10 +73,10 @@ struct ihb_can_perph {
  */
 struct ihb_structs {
 #ifdef MODULE_IHBCAN
-	struct ihb_can_perph **can;
+	struct ihb_can_perph *can;
 #endif
 #ifdef MODULE_IHBNETSIM
-	struct skin_node **sk_nodes;
+	struct skin_node *sk_nodes;
 #endif
 };
 
