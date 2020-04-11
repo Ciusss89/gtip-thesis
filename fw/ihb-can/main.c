@@ -237,20 +237,6 @@ static void *_thread_notify_node(void *arg)
 	return NULL;
 }
 
-static void display(void)
-{
-	printf("[*] IHB: struct address=%p, size=%ubytes", can,
-							   sizeof(struct ihb_can_perph));
-
-	printf("\n\tdev=%d  \n\tname=%s \n\tmcu_id=%s, \n\tframe_id=%#x \n\trole=%s \n\tnotify=%s\n",
-		can->id,
-		can->name,
-		can->controller_uid,
-		can->frame_id,
-		can->master ? "master" : "idle",
-		can->status_notify_node ? "is running" : "no");
-}
-
 int _ihb_can_handler(int argc, char **argv)
 {
 	msg_t msg;
@@ -258,8 +244,6 @@ int _ihb_can_handler(int argc, char **argv)
 	if (argc < 2) {
 		_usage();
 		return 1;
-	} else if (strncmp(argv[1], "list", 5) == 0) {
-		display();
 	} else if (strncmp(argv[1], "canON", 6) == 0) {
 		return _power_up(can->id);
 	} else if (strncmp(argv[1], "canOFF", 7) == 0) {
