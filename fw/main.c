@@ -31,6 +31,49 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 static struct ihb_structs IHB;
 
+int ihb_struct_list(int argc, char **argv)
+{
+	(void)argc;
+	(void)argv;
+	puts("[*] IHB info");
+
+#ifdef MODULE_IHBCAN
+	const struct ihb_can_perph *can = IHB.can;
+	if(IHB.can) {
+		printf("- CAN: struct ihb_can_perph address=%p, size=%ubytes",
+			IHB.can,
+			sizeof(struct ihb_can_perph));
+
+		printf("\n\tdev=%d\n\tname=%s\n\tmcu_id=%s\n\tframe_id=%#x\n\trole=%s\n\tnotify=%s\n",
+			can->id,
+			can->name,
+			can->controller_uid,
+			can->frame_id,
+			can->master ? "master" : "idle",
+			can->status_notify_node ? "is running" : "no");
+	} else {
+		puts("[!] BUG: this struct never should be null");
+	}
+#endif
+#ifdef MODULE_IHBNETSIM
+	if(IHB.can) {
+		printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
+			IHB.sk_nodes,
+			sizeof(struct skin_node));
+
+		printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
+			SK_T_S,
+			SK_N_S);
+	} else {
+		puts("[!] BUG: this struct never should be null");
+	}
+#endif
+
+	/* !TODO add fw versioning and others info */
+
+	return 0;
+}
+
 /* Add custom tool to system shell */
 static const shell_command_t shell_commands[] = {
 #ifdef MODULE_UPTIME
@@ -39,6 +82,7 @@ static const shell_command_t shell_commands[] = {
 #ifdef MODULE_IHBCAN
 	{ "ihbcan", IHB_THREAD_HELP, _ihb_can_handler},
 #endif
+	{ "ihb", "ihb data info", ihb_struct_list},
 	{ NULL, NULL, NULL }
 };
 static char line_buf[SHELL_DEFAULT_BUFSIZE];
