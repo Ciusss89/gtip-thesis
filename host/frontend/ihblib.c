@@ -414,13 +414,14 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 				puts("-------------------------------------------------------------------------------");
 			}
 
-			printf("\r[*] IHB data has been received, chunk=%lubytes iter=%d", buff_l, i);
+			printf("[*] IHB data has been received, chunk=%lubytes iter=%d\r", buff_l, i);
 _short_rcv:
 			free(p);
 		}
 
 	} while (running);
 
-	puts("[!] Receiving data from IHB is ended.");
+
+	puts("\n[!] Receiving data from IHB is ended.");
 	return r;
 }
