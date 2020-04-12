@@ -22,10 +22,6 @@
 #include "skin.h"
 #include "ihb.h"
 
-#define SK_UPDATE_2000MS       (2000LU * US_PER_MS)    /* 2s */
-#define SK_UPDATE_0100MS       (100LU * US_PER_MS)     /* 100ms */
-#define SK_UPDATE_0005MS       (5LU * US_PER_MS)       /* 5ms */
-
 struct skin_node *sk;
 
 void *_skin_node_sim_thread(void *in)
@@ -65,7 +61,7 @@ void *_skin_node_sim_thread(void *in)
 			}
 		}
 
-		xtimer_usleep(SK_UPDATE_0005MS);
+		xtimer_usleep(WAIT_100ms);
 	}
 
 	return NULL;
