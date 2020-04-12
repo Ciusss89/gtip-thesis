@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 		goto _fail1;
 
 	if(ihb_nodes != 0) {
-		fprintf(stdout, "[*] Network size %d. IHB master candidate = %02x\n",
+		fprintf(stdout, "[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 	} else {
 		fprintf(stderr, "[!] There are not IHBs available");
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 		}
 
 		isotp_fails = false;
-		fprintf(stdout, "[*] Network size %d. IHB master candidate = %02x\n",
+		fprintf(stdout, "[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 
 		/* Start the setup of the nodes */
@@ -189,8 +189,8 @@ int main(int argc, char **argv)
 			break;
 	}
 
-
-	free(data);
+	if(data)
+		free(data);
 
 	shutdown(can_soc_isotp, 2);
 	close(can_soc_isotp);
