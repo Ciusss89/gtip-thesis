@@ -39,7 +39,7 @@ static struct ihb_node *find_canID(int can_id) {
 int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 {
 	struct ihb_node *ihb;
-
+	bool find = false;
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
 		if(v)
@@ -49,9 +49,12 @@ int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 			fprintf(stdout, "[*] IHB node=%#x has expired\n",
 					ihb->canID);
 			ihb->expired = true;
-			return 0;
+			find = true;
 		}
 	}
+	
+	if(find)
+		return 0;
 
 	fprintf(stderr, "[@] BUG: Node %#x not in list\n", ihb->canID);
 
@@ -72,6 +75,7 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 
 				if(v)
 					fprintf(stdout, "[#] IHB new candidate %#x\n", ihb->canID);
+
 				*master_id = ihb->canID;
 			}
 		}
@@ -96,60 +100,66 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 	char *cmd;
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
-		fprintf(stdout, "[*] Configuring the IHB node=%#x\n", ihb->canID);
 
-		/*
-		 * Send a RTR frame to the IHB, it determinates its role
-		 * by the DLC val.
-		 */
-		r = asprintf(&cmd, "%03x#R", ihb->canID);
-		if (r < 0) {
-			fprintf(stderr, "[!] asprintf fails");
-			break;
-		}
+		if(!ihb->expired) {
 
-		if(ihb->canID == c_id_master & !ihb->expired) {
 			/*
-			 * Parse CAN frame
-			 *
-			 * Transfers a valid ASCII string describing a CAN frame
-			 * into struct canfd_frame
+			 * Send a RTR frame to the IHB, it determinates its role
+			 * by the DLC val.
 			 */
-			required_mtu = parse_canframe(cmd, &frame);
-
-			/* it becomes master */
-			frame.len = MASTER;
-
-			/* send frame */
-			if (write(s, &frame, required_mtu) != required_mtu) {
-				r = -1;
+			r = asprintf(&cmd, "%03x#R", ihb->canID);
+			if (r < 0) {
+				fprintf(stderr, "[!] asprintf fails");
 				break;
 			}
 
-			ihb->best = true;
+			if(ihb->canID == c_id_master) {
+				/*
+				 * Parse CAN frame
+				 *
+				 * Transfers a valid ASCII string describing a CAN frame
+				 * into struct canfd_frame
+				 */
+				required_mtu = parse_canframe(cmd, &frame);
 
-			free(cmd);
-		} else {
-			/*
-			 * Parse CAN frame
-			 *
-			 * Transfers a valid ASCII string describing a CAN frame
-			 * into struct canfd_frame
-			 */
-			required_mtu = parse_canframe(cmd, &frame);
+				/* it becomes master */
+				frame.len = MASTER;
 
-			/* it becomes slave */
-			frame.len = IDLE;
+				/* send frame */
+				if (write(s, &frame, required_mtu) != required_mtu) {
+					r = -1;
+					break;
+				}
 
-			/* send frame */
-			if (write(s, &frame, required_mtu) != required_mtu) {
-				r = -1;
-				break;
+				ihb->best = true;
+
+				free(cmd);
+			} else {
+				/*
+				 * Parse CAN frame
+				 *
+				 * Transfers a valid ASCII string describing a CAN frame
+				 * into struct canfd_frame
+				 */
+				required_mtu = parse_canframe(cmd, &frame);
+
+				/* it becomes slave */
+				frame.len = IDLE;
+
+				/* send frame */
+				if (write(s, &frame, required_mtu) != required_mtu) {
+					r = -1;
+					break;
+				}
+
+				ihb->best = false;
+
+				free(cmd);
 			}
 
-			ihb->best = false;
-
-			free(cmd);
+			fprintf(stdout, "[*] Configuring the IHB node=%#x %s\n",
+					ihb->canID,
+					ihb->best ? "as MASTER" : "as FALLBACK");
 		}
 	}
 
