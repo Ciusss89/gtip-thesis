@@ -61,7 +61,7 @@ int ihb_struct_list(int argc, char **argv)
 	}
 #endif
 #ifdef MODULE_IHBNETSIM
-	if(IHB.can) {
+	if(IHB.sk_nodes) {
 		printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
 			IHB.sk_nodes,
 			sizeof(struct skin_node));
