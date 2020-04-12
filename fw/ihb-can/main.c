@@ -46,7 +46,6 @@ struct ihb_can_perph *can;
 static void _usage(void)
 {
 	puts("IHBCAN userspace");
-	puts("\tihbcan list      - show CAN controller struct");
 	puts("\tihbcan canON     - turn on can controller");
 	puts("\tihbcan canOFF    - turn off can controller");
 	puts("\tihbcan notifyOFF - teardown pid_notify_node");
