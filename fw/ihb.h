@@ -43,6 +43,13 @@ struct skin_node {
 #endif
 
 #ifdef MODULE_IHBCAN
+/*
+ * IPC messages:
+ */
+#define CAN_MSG_START_ISOTP	0x400
+#define CAN_MSG_SEND_ISOTP	0x401
+#define CAN_MSG_CLOSE_ISOTP	0x402
+
 /* Maximum length of CAN name */
 #define CAN_NAME_LEN (16 + 1)
 
