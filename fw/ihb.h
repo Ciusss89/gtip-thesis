@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+/* RIOT APIs */
+#include "thread.h"
+
 #ifdef MODULE_IHBNETSIM
 /* SK_N_S: Skin nodes for IHB */
 #define SK_N_S (16u)
@@ -74,6 +77,8 @@ struct ihb_can_perph {
 struct ihb_structs {
 #ifdef MODULE_IHBCAN
 	struct ihb_can_perph *can;
+	kernel_pid_t *pid_notify_node;
+	kernel_pid_t *pid_send2host;
 #endif
 #ifdef MODULE_IHBNETSIM
 	struct skin_node *sk_nodes;

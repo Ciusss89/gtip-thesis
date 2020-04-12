@@ -277,6 +277,8 @@ int _can_init(struct ihb_structs *IHB)
 
 	can = xmalloc(sizeof(struct ihb_can_perph));
 
+	IHB->pid_notify_node = &pid_notify_node;
+	IHB->pid_send2host = &pid_send2host;
 	IHB->can = can;
 
 	if(CAN_DLL_NUMOF == 0)

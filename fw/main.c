@@ -51,6 +51,11 @@ int ihb_struct_list(int argc, char **argv)
 			can->frame_id,
 			can->master ? "master" : "idle",
 			can->status_notify_node ? "is running" : "no");
+
+		printf("- PIDs:\n\tnotify=%d\n\tsend2host=%d\n",
+			*IHB.pid_notify_node,
+			*IHB.pid_send2host);
+
 	} else {
 		puts("[!] BUG: this struct never should be null");
 	}
