@@ -31,8 +31,6 @@
 #include "can.h"
 #include "ihb.h"
 
-#define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1 s */
-#define WAIT_100ms	(100LU * US_PER_MS)	/* delay of 1 s */
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
