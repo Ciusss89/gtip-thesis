@@ -14,6 +14,7 @@
 #include "board.h"
 #include "random.h"
 #include "xtimer.h"
+#include "msg.h"
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -23,11 +24,16 @@
 #include "ihb.h"
 
 struct skin_node *sk;
-
+#ifdef MODULE_IHBCAN
+static kernel_pid_t *pid_send2host;
+#endif
 void *_skin_node_sim_thread(void *in)
 {
 	struct ihb_structs *IHB = (struct ihb_structs *)in;
-
+#ifdef MODULE_IHBCAN
+	msg_t msg;
+	pid_send2host = IHB->pid_send2host;
+#endif
 	sk = xcalloc(SK_N_S, sizeof(struct skin_node));
 
 	IHB->sk_nodes = sk;
@@ -60,7 +66,10 @@ void *_skin_node_sim_thread(void *in)
 				puts(" ");
 			}
 		}
-
+#ifdef MODULE_IHBCAN
+		msg.type = CAN_MSG_SEND_ISOTP;
+		msg_try_send(&msg, *pid_send2host);
+#endif
 		xtimer_usleep(WAIT_100ms);
 	}
 
