@@ -16,7 +16,7 @@
 #include "thread.h"
 #include "msg.h"
 
-#define ENABLE_DEBUG    (1)
+#define ENABLE_DEBUG    (0)
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
@@ -106,6 +106,9 @@ void *_thread_send2host(void *in)
 
 				serialize(&buff);
 
+				/*
+				 * CAN_ISOTP_TX_DONT_WAIT make it not blocking,
+				 */
 				r = conn_can_isotp_send(&conn, buff, buff_l, 0);
 				if(r < 0) {
 					printf("[!] iso-tp send err=%d\n", r);
