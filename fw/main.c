@@ -69,6 +69,9 @@ int ihb_struct_list(int argc, char **argv)
 		printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
 			SK_T_S,
 			SK_N_S);
+
+		printf("- PIDs:\n\tNetSkinSimulator=%d\n\t", *IHB.pid_ihbnetsim);
+
 	} else {
 		puts("[!] BUG: this struct never should be null");
 	}
@@ -109,7 +112,7 @@ static int ihb_init(void)
 #ifdef MODULE_IHBNETSIM
 	IHB.sk_nodes = NULL;
 	puts("[*] MODULE_IHBNETSIM");
-	int pid_ihbnetsim = thread_create(skin_sim_stack,
+	kernel_pid_t pid_ihbnetsim = thread_create(skin_sim_stack,
 					  sizeof(skin_sim_stack),
 					  THREAD_PRIORITY_MAIN - 2,
 					  THREAD_CREATE_WOUT_YIELD,
@@ -118,6 +121,8 @@ static int ihb_init(void)
 
 	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
 		puts("[!] cannot start the skin simulator thread");
+
+	IHB.pid_ihbnetsim = &pid_ihbnetsim;
 #endif
 
 #ifdef MODULE_IHBCAN

@@ -82,6 +82,7 @@ struct ihb_structs {
 #endif
 #ifdef MODULE_IHBNETSIM
 	struct skin_node *sk_nodes;
+	kernel_pid_t *pid_ihbnetsim;
 #endif
 };
 
