@@ -36,6 +36,28 @@ static struct ihb_node *find_canID(int can_id) {
 	return s;
 }
 
+int ihb_blacklist_node(uint8_t ihb_expired, bool v)
+{
+	struct ihb_node *ihb;
+
+
+	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
+		if(v)
+			fprintf(stdout, "Checking IHB node=%02x\n", ihb->canID);
+
+		if(ihb->canID == ihb_expired){
+			fprintf(stdout, "Set IHB node=%02x as expired\n",
+					ihb->canID);
+			ihb->expired = true;
+			return 0;
+		}
+	}
+
+	fprintf(stderr, "BUG: Node %02x not in list\n", ihb->canID);
+
+	return -1;
+}
+
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
 	const uint8_t MASTER = 7, IDLE = 3;

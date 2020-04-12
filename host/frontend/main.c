@@ -124,6 +124,11 @@ int main(int argc, char **argv)
 
 		/* If the IHB goes in timeout, it has passed away */
 		if(r == -ETIMEDOUT) {
+			r = ihb_blacklist_node(master_id, verbose);
+			if (r < 0) {
+				printf(stderr, "Cannot blacklist the IHB node=%#x\n", master_id);
+				break;
+			}
 			// !TODO Add logic
 			//  1. to search new candidate
 			//  2. to configure new candidate
