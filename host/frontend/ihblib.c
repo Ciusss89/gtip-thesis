@@ -68,21 +68,24 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 	bool find = false;
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
-		if(ihb->canID <= *master_id) {
-
-			if(!ihb->expired) {
-				find = true;
+		if(ihb->expired){
+			if(v)
+				fprintf(stdout, "[#] ignore IHB candidate %#x\n", ihb->canID);
+			continue;
+		} else {
+			if(ihb->canID <= *master_id) {
+				*master_id = ihb->canID;
 
 				if(v)
 					fprintf(stdout, "[#] IHB new candidate %#x\n", ihb->canID);
 
-				*master_id = ihb->canID;
+				find = true;
 			}
 		}
 	}
 
 	if(find) {
-		fprintf(stdout, "[*] Fallback on the IHB node=%#x\n", ihb->canID);
+		fprintf(stdout, "[*] Fallback on the IHB node=%#x\n", *master_id);
 		return 0;
 	}
 
