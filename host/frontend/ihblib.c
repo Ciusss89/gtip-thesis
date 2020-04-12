@@ -43,17 +43,17 @@ int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
 		if(v)
-			fprintf(stdout, "Checking IHB node=%02x\n", ihb->canID);
+			fprintf(stdout, "[#] Checking IHB node=%#x\n", ihb->canID);
 
 		if(ihb->canID == ihb_expired){
-			fprintf(stdout, "Set IHB node=%02x as expired\n",
+			fprintf(stdout, "[*] IHB node=%#x has expired\n",
 					ihb->canID);
 			ihb->expired = true;
 			return 0;
 		}
 	}
 
-	fprintf(stderr, "BUG: Node %02x not in list\n", ihb->canID);
+	fprintf(stderr, "[@] BUG: Node %#x not in list\n", ihb->canID);
 
 	return -1;
 }
@@ -71,18 +71,18 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 				find = true;
 
 				if(v)
-					fprintf(stdout, "IHB new candidate %02x\n", ihb->canID);
+					fprintf(stdout, "[#] IHB new candidate %#x\n", ihb->canID);
 				*master_id = ihb->canID;
 			}
 		}
 	}
 
 	if(find) {
-		fprintf(stdout, "Fallback on IHB node=%02x\n", ihb->canID);
+		fprintf(stdout, "[*] Fallback on the IHB node=%#x\n", ihb->canID);
 		return 0;
 	}
 
-	fprintf(stderr, "BUG: Node %02x not in list\n", ihb->canID);
+	fprintf(stderr, "[@] BUG: fallback fails..\n");
 	return -1;
 }
 
@@ -96,7 +96,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 	char *cmd;
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
-		fprintf(stdout, "configuring IHB node=%02x\n", ihb->canID);
+		fprintf(stdout, "[*] Configuring the IHB node=%#x\n", ihb->canID);
 
 		/*
 		 * Send a RTR frame to the IHB, it determinates its role
@@ -104,7 +104,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 		 */
 		r = asprintf(&cmd, "%03x#R", ihb->canID);
 		if (r < 0) {
-			fprintf(stderr, "ihb_setup: asprintf fails");
+			fprintf(stderr, "[!] asprintf fails");
 			break;
 		}
 
@@ -175,13 +175,13 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 		r = select(fd + 1, &rdfs, NULL, NULL, &timeout_config);
 
 		if (r < 0) {
-			fprintf(stderr, "can_soc_fd not ready: %s\n", strerror(errno));
+			fprintf(stderr, "[!] can_soc_fd not ready: %s\n", strerror(errno));
 			discovery = false;
 			continue;
 		}
 
 		if (r == 0) {
-			fprintf(stdout, "discovery phase has been elapsed\n");
+			fprintf(stdout, "[*] Discovery of IHBs has been elapsed\n");
 			discovery = false;
 			continue;
 		}
@@ -190,12 +190,12 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 			recv_bytes = read(fd, &frame_rd, sizeof(struct can_frame));
 			if (!recv_bytes) {
-				fprintf(stderr, "read failure: %s\n", strerror(errno));
+				fprintf(stderr, "[!] read failure: %s\n", strerror(errno));
 				continue;
 			}
 
 			if(v) {
-				fprintf(stdout, "id = %02x  dlc = [%d], data = ",
+				fprintf(stdout, "id = %#x  dlc = [%d], data = ",
 						frame_rd.can_id,
 						frame_rd.can_dlc);
 				for (i = 0; i < frame_rd.can_dlc; i++)
@@ -210,7 +210,7 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 					ihb = (struct ihb_node *)malloc(sizeof(struct ihb_node));
 					if (ihb == NULL) {
-						fprintf(stderr, "malloc failure:\n");
+						fprintf(stderr, "[!] malloc failure:\n");
 						discovery = false;
 						return -1;
 					}
@@ -221,7 +221,7 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 					HASH_ADD_INT(ihbs, canID, ihb);
 
-					fprintf(stdout, "ihb node %02x has been added\n",
+					fprintf(stdout, "[*] IHB node=%#x has been added\n",
 							ihb->canID);
 
 					*ihb_nodes = *ihb_nodes + 1;
@@ -251,7 +251,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 
 	*can_soc_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 	if (*can_soc_fd < 0) {
-		fprintf(stderr, "socket open failure! %s\n", strerror(errno));
+		fprintf(stderr, "[!] socket open failure! %s\n", strerror(errno));
 		return -errno;
 	}
 
@@ -261,7 +261,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 
 	r = ioctl(*can_soc_fd, SIOCGIFINDEX, &ifr);
 	if (r < 0) {
-		fprintf(stderr, "ioctl has failed: %s\n", strerror(errno));
+		fprintf(stderr, "[!] ioctl has failed: %s\n", strerror(errno));
 		return -errno;
 	} else {
 		addr.can_ifindex = ifr.ifr_ifindex;
@@ -273,7 +273,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
 
-		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
 
@@ -298,7 +298,7 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 
 	*can_soc_fd = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP);
 	if (*can_soc_fd < 0) {
-		fprintf(stderr, "socket open failure! %s\n", strerror(errno));
+		fprintf(stderr, "[!] socket open failure! %s\n", strerror(errno));
 		return -errno;
 	}
 
@@ -310,7 +310,7 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
-		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
 
@@ -336,7 +336,7 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
-		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
 		return -errno;
 	}
 
@@ -362,12 +362,12 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 		r = select(fd + 1, &rdfs, NULL, NULL, &timeout_config);
 
 		if (r < 0) {
-			fprintf(stderr, "socket not ready: %s\n", strerror(errno));
+			fprintf(stderr, "[!]socket not ready: %s\n", strerror(errno));
 			break;
 		}
 
 		if (r == 0) {
-			fprintf(stdout, "IHB failure detected: the timeout is over\n");
+			fprintf(stdout, "[*] IHB failure detected: the timeout is over\n");
 			r = -ETIMEDOUT;
 			break;
 		}
@@ -375,7 +375,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 		if (FD_ISSET(fd, &rdfs)) {
 			p = calloc(SK_N_S, nmemb);
 			if(!p){
-				fprintf(stderr, "calloc fails\n");
+				fprintf(stderr, "[!] calloc fails\n");
 				return -1;
 			}
 
@@ -401,13 +401,13 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 				puts("-------------------------------------------------------------------------------");
 			}
 
-			printf("\rIHB data has been received, chunk=%lubytes iter=%d", buff_l, i);
+			printf("\r[*] IHB data has been received, chunk=%lubytes iter=%d", buff_l, i);
 _short_rcv:
 			free(p);
 		}
 
 	} while (running);
 
-	puts("receive is ended.");
+	puts("[!] Receiving data from IHB is ended.");
 	return r;
 }
