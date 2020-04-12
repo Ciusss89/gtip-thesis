@@ -58,6 +58,34 @@ int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 	return -1;
 }
 
+
+int ihb_discovery_newone(uint8_t *master_id, bool v)
+{
+	struct ihb_node *ihb;
+	bool find = false;
+
+	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
+		if(ihb->canID <= *master_id) {
+
+			if(!ihb->expired) {
+				find = true;
+
+				if(v)
+					fprintf(stdout, "IHB new candidate %02x\n", ihb->canID);
+				*master_id = ihb->canID;
+			}
+		}
+	}
+
+	if(find) {
+		fprintf(stdout, "Fallback on IHB node=%02x\n", ihb->canID);
+		return 0;
+	}
+
+	fprintf(stderr, "BUG: Node %02x not in list\n", ihb->canID);
+	return -1;
+}
+
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
 	const uint8_t MASTER = 7, IDLE = 3;

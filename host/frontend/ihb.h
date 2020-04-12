@@ -49,5 +49,8 @@ int ihb_rcv_data(int can_soc_fd, void **ptr, bool v);
  */
 int ihb_blacklist_node(uint8_t ihb_expired, bool v);
 
-
+/*
+ *
+ */
+int ihb_discovery_newone(uint8_t *master_id, bool v);
 #endif
