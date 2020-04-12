@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 		goto _fail1;
 
 	if(ihb_nodes != 0) {
-		fprintf(stdout, "[*] Network size %d. IHB master candidate = %#x\n",
+		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 	} else {
 		fprintf(stderr, "[!] There are not IHBs available");
@@ -162,7 +162,6 @@ int main(int argc, char **argv)
 		}
 
 		if(isotp_fails) {
-
 			r = ihb_blacklist_node(master_id, verbose);
 			if (r < 0) {
 				fprintf(stderr, "[!] Cannot blacklist the IHB node=%#x\n", master_id);
@@ -180,7 +179,7 @@ int main(int argc, char **argv)
 		}
 
 		isotp_fails = false;
-		fprintf(stdout, "[*] Network size %d. IHB master candidate = %#x\n",
+		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 
 		/* Start the setup of the nodes */
