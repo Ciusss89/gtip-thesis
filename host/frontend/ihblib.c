@@ -112,7 +112,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 			 */
 			r = asprintf(&cmd, "%03x#R", ihb->canID);
 			if (r < 0) {
-				fprintf(stderr, "[!] asprintf fails");
+				fprintf(stderr, "[!] asprintf fails\n");
 				break;
 			}
 
@@ -422,6 +422,6 @@ _short_rcv:
 	} while (running);
 
 
-	puts("\n[!] Receiving data from IHB is ended.");
+	puts("\n[!] Receiving data from IHB is ended.\n");
 	return r;
 }
