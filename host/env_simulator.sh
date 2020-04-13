@@ -14,7 +14,7 @@ _init_periph() {
 }
 
 _clean() {
-	kill $PID_IHB8 $PID_IHB32 $PID_IHB101 $PID_IHB121 $PID_IHB243 $PID_IHB4
+	kill $PID_IHB8 $PID_IHB20 $PID_IHB101 $PID_IHB121 $PID_IHB243 $PID_IHB4
 
 	ip link delete dev vcan0
 
@@ -23,7 +23,7 @@ _clean() {
 
 _simulate_notify() {
 	cangen vcan0 -I 8 -g 2500 -D $IHB_MAGIC -L 8 & PID_IHB8="$!"
-	cangen vcan0 -I 20 -g 1500 -D $IHB_MAGIC -L 8 & PID_IHB32="$!"
+	cangen vcan0 -I 20 -g 1500 -D $IHB_MAGIC -L 8 & PID_IHB20="$!"
 	cangen vcan0 -I 65 -g 4000 -D $IHB_MAGIC -L 8 & PID_IHB101="$!"
 	cangen vcan0 -I 121 -g 5700 - & PID_IHB121="$!"
 	cangen vcan0 -I 234 -g 5900 & PID_IHB243="$!"
