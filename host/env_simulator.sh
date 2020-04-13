@@ -45,8 +45,15 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+if [ ! -z "$1" ]
+  then echo "Use interface $1"
+  DEVICE="$1"
+fi
 
-_init_periph
+if [ "$DEVICE" == "vcan0" ]; then
+    _init_periph
+fi
+
 _periph_up
 
 _simulate_notify
@@ -55,4 +62,6 @@ _dump_can
 echo "enter to exit" && read;
 
 _kill
-_clean
+if [ "$DEVICE" == "vcan0" ]; then
+	_clean
+fi
