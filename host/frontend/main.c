@@ -150,6 +150,8 @@ int main(int argc, char **argv)
 
 				/* If it was the last exit */
 				if(ihb_nodes == 0) {
+					fprintf(stdout, "[*] IHB node=%#x has expired\n",
+							master_id);
 					fprintf(stdout, "[*] There are not IHBs available\n");
 					break;
 				}
