@@ -19,6 +19,16 @@
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
+/*
+ * IF true the system sends data chunks at maximum speed through a blocking
+ * syscall. The maximum speed of transmission depends on CAN subsystem and
+ * ISOTP channel options.
+ *
+ * If false the system sends data through a non-blocking syscall, so the
+ * xtimer_usleep must be higher then CAN's time.
+ */
+#define BLOCKING (1)
+
 #include "ihb-tools/tools.h"
 #include "skin.h"
 #include "ihb.h"
@@ -68,9 +78,14 @@ void *_skin_node_sim_thread(void *in)
 		}
 #ifdef MODULE_IHBCAN
 		msg.type = CAN_MSG_SEND_ISOTP;
-		msg_try_send(&msg, *pid_send2host);
+
+		if (BLOCKING) {
+			msg_send (&msg, *pid_send2host);
+		} else {
+			msg_try_send (&msg, *pid_send2host);
+			xtimer_usleep(WAIT_500ms);
+		}
 #endif
-		xtimer_usleep(WAIT_100ms);
 	}
 
 	return NULL;
