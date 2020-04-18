@@ -100,10 +100,10 @@ static uint8_t _power_down(uint8_t ifnum)
 	return 0;
 }
 
-static void *_thread_notify_node(void *arg)
+static void *_thread_notify_node(__unused void *arg)
 {
-	(void)arg;
-
+	const unsigned char busy[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x55, 0x53, 0x59, 0};
+	const unsigned char idle[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0x45, 0};
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
@@ -111,16 +111,21 @@ static void *_thread_notify_node(void *arg)
 	msg_t msg;
 	int r;
 
+	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
+	if (r < 0) {
+		printf("[!] cannot create the CAN socket: err=%d\n", r);
+		return NULL;
+	}
+
 	can->status_notify_node = true;
 
+	/*
+	 * Configure the frame which has to be sent
+	 * - IHB's MAGIC: ASCII "_IHB..V_"
+	 * - TODO! Pass the magic as configurable paramiter from the Makefile
+	 */
 	snd_frame->can_id = can->frame_id;
 	snd_frame->can_dlc = 8;
-
-	/*
-	 * Send IHB's asci magic string "_IHB_V.3_"
-	 *
-	 * TODO! Pass the magic as configurable paramiter from the Makefile
-	 */
 	snd_frame->data[0] = 0x5F;
 	snd_frame->data[1] = 0x49;
 	snd_frame->data[2] = 0x48;
@@ -129,12 +134,6 @@ static void *_thread_notify_node(void *arg)
 	snd_frame->data[5] = 0xF5;
 	snd_frame->data[6] = 0x56;
 	snd_frame->data[7] = 0x5F;
-
-	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
-	if (r < 0) {
-		printf("[!] cannot create the CAN socket: err=%d\n", r);
-		return NULL;
-	}
 
 	/*
 	 * Setup the filter for rcv socket
@@ -174,62 +173,70 @@ static void *_thread_notify_node(void *arg)
 		}
 
 		/*
-		 * Issue:
-		 * I would make true the next while only if the RTR bit is set,
-		 * but currently it enters also if the RTR is not set.
+		 * rcv raw can socket:
+		 *
+		 * When conn_can_raw_recv goes in timeout it returns -ETIMEDOUT.
+		 * https://github.com/RIOT-OS/RIOT/issues/13744
 		 */
 		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
 			 == sizeof(struct can_frame))) {
 
-			if(rcv_frame->can_dlc == 7) {
-				can->status_notify_node = false;
-				can->master = true;
-
-				msg.type = CAN_MSG_START_ISOTP;
-				msg_try_send(&msg, pid_send2host);
-
-				puts("[*] This node is MASTER");
-
-			} else if (rcv_frame->can_dlc == 3) {
-				can->status_notify_node = false;
-				can->master = false;
-
-				puts("[*] This node is SLAVE");
-			} else {
-				/*
-				 * This never should happen if:
-				 *  - the RTR bit is set
-				 *  - IHB are connected only to the HOST.
-				 */
-				if(ENABLE_DEBUG) {
-					printf("[#] ihbcan: ID=%02lx  DLC=[%x] DATA=",
-							rcv_frame->can_id,
-							rcv_frame->can_dlc);
-
-					for (int i = 0; i < rcv_frame->can_dlc; i++)
+			if(ENABLE_DEBUG) {
+				printf("[#] ihbcan: ID=%02lx  DLC=[%x] DATA=",
+						rcv_frame->can_id,
+						rcv_frame->can_dlc);
+				for (int i = 0; i < rcv_frame->can_dlc; i++)
 					printf(" %02X", rcv_frame->data[i]);
-					puts("");
+				puts("");
+			}
+
+			/* The message should be 8 byte lenght */
+			if(rcv_frame->can_dlc == 8) {
+
+				/* Is master ? */
+				r = memcmp(&busy, rcv_frame->data,
+					   rcv_frame->can_dlc);
+				if (r == 0) {
+					can->status_notify_node = false;
+					can->master = true;
+					puts("[*] This node is MASTER");
+					break;
 				}
-				puts("BUG: I received an unexpected frame, it has been ignored.");
+
+				/* Is slave ? */
+				r = memcmp(&idle, rcv_frame->data,
+					   rcv_frame->can_dlc);
+				if (r == 0) {
+					can->status_notify_node = false;
+					can->master = false;
+					puts("[*] This node is SLAVE");
+					break;
+				}
 			}
 		}
 
 	/*
-	 * Loop until
-	 *  - no errors on the CAN APIs
-	 *  - node have to stay in listend mode
+	 * Loop condition
+	 *  - raw send/rcv until no errors on the CAN APIs && status_notify_node
+	 *    is true
+	 *  - olny raw rcv until no errors on the CAN APIs && status_notify_node
+	 *    if false
 	 */
-	} while (r >= 0 && (!can->master || can->status_notify_node));
+	} while (!can->master || can->status_notify_node);
 
-	r = conn_can_raw_close(&conn);
-	if (r < 0)
+	if (conn_can_raw_close(&conn) < 0)
 		printf("[!] error closing the CAN socket: err=%d\n", r);
 
 	free(snd_frame);
 	free(rcv_frame);
+	free(filter);
 
-	if(r >= 0)
-		puts("[*] Notify thread has ended successfully");
+	/* Switch to transmission */
+	if(can->master) {
+		xtimer_usleep(WAIT_100ms);
+		msg.type = CAN_MSG_START_ISOTP;
+		msg_try_send(&msg, pid_send2host);
+	}
 
 	return NULL;
 }
@@ -341,19 +348,6 @@ int _can_init(struct ihb_structs *IHB)
 		puts("[!] cannot create thread notify node");
 		return 1;
 	}
-
-	/* IDEA:
-	 *
-	 * 1) NODO-iesimo: Power-ON tutti hanno un CAN-ID (1-255) derivato dal CPUID != 0
-	 * 2) NODO-iesimo: Power-ON, INIT: Ogni nodeo manda un frame di IMALIVE
-	 * 3) HOST: dump di tutti i frame con CAN-ID compreso tra 1 e 255
-	 * 3) HOST: master quello che tra ha CAN-ID minore.
-	 * 4) HOST: Assegna al can-id master, CAN-iD 0
-	 * 5) HOST: avvisa gli altri nodi che non sono master.
-	 * 5) HODO-iesimo: non master dump per can-id 0. Ok se traffico
-	 * 6) HOST: avvia la comunicazione con il mater.
-	 *
-	 * */
 
 	puts("[*] IHB: init of the CAN subumodule success");
 	return 0;
