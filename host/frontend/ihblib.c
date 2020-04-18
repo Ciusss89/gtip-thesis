@@ -95,7 +95,6 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
-	const uint8_t MASTER = 7, IDLE = 3;
 	struct canfd_frame frame;
 	struct ihb_node *ihb;
 
@@ -106,59 +105,44 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 
 		if(!ihb->expired) {
 
+			if(ihb->canID == c_id_master) {
+				/* Send ASCII: IHB-BUSY to master node */
+				r = asprintf(&cmd, "%03x#4948422D42555359",
+					     ihb->canID);
+				if (r < 0) {
+					fprintf(stderr, "[!] asprintf fails\n");
+					break;
+				}
+				ihb->best = true;
+			} else {
+				/* Send ASCII: IHB-BUSY to idle nodes */
+				r = asprintf(&cmd, "%03x#4948422D49444C45",
+					     ihb->canID);
+				if (r < 0) {
+					fprintf(stderr, "[!] asprintf fails\n");
+					break;
+				}
+				ihb->best = false;
+			}
+
+			/* ASCII message are both 8 bytes length */
+			frame.len = 8;
+
 			/*
-			 * Send a RTR frame to the IHB, it determinates its role
-			 * by the DLC val.
+			 * Parse CAN frame
+			 *
+			 * Transfers a valid ASCII string describing a CAN frame
+			 * into struct canfd_frame
 			 */
-			r = asprintf(&cmd, "%03x#R", ihb->canID);
-			if (r < 0) {
-				fprintf(stderr, "[!] asprintf fails\n");
+			required_mtu = parse_canframe(cmd, &frame);
+
+			/* send frame */
+			if (write(s, &frame, required_mtu) != required_mtu) {
+				r = -1;
 				break;
 			}
 
-			if(ihb->canID == c_id_master) {
-				/*
-				 * Parse CAN frame
-				 *
-				 * Transfers a valid ASCII string describing a CAN frame
-				 * into struct canfd_frame
-				 */
-				required_mtu = parse_canframe(cmd, &frame);
-
-				/* it becomes master */
-				frame.len = MASTER;
-
-				/* send frame */
-				if (write(s, &frame, required_mtu) != required_mtu) {
-					r = -1;
-					break;
-				}
-
-				ihb->best = true;
-
-				free(cmd);
-			} else {
-				/*
-				 * Parse CAN frame
-				 *
-				 * Transfers a valid ASCII string describing a CAN frame
-				 * into struct canfd_frame
-				 */
-				required_mtu = parse_canframe(cmd, &frame);
-
-				/* it becomes slave */
-				frame.len = IDLE;
-
-				/* send frame */
-				if (write(s, &frame, required_mtu) != required_mtu) {
-					r = -1;
-					break;
-				}
-
-				ihb->best = false;
-
-				free(cmd);
-			}
+			free(cmd);
 
 			fprintf(stdout, "[*] Configuring the IHB node=%#x %s\n",
 					ihb->canID,
