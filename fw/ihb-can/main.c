@@ -24,7 +24,7 @@
 #include "can/device.h"
 #include "can/can.h"
 
-#define ENABLE_DEBUG    (1)
+#define ENABLE_DEBUG    (0)
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
@@ -40,6 +40,9 @@ static char send2host_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_send2host;
 
 struct ihb_can_perph *can;
+
+/* true if runs an userspace tool */
+static bool us_overdrive = false;
 
 static void _usage(void)
 {
@@ -142,6 +145,10 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	do {
+
+		if(us_overdrive)
+			break;
+
 		/*
 		 * The raw frame must be sent until the HOST doesn't discovery
 		 * me. When the HOST has assigned all roles to the IHBs nodes,
@@ -232,7 +239,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	free(filter);
 
 	/* Switch to transmission */
-	if(can->master) {
+	if(can->master && !us_overdrive) {
 		xtimer_usleep(WAIT_100ms);
 		msg.type = CAN_MSG_START_ISOTP;
 		msg_try_send(&msg, pid_send2host);
@@ -253,18 +260,27 @@ int _ihb_can_handler(int argc, char **argv)
 	} else if (strncmp(argv[1], "canOFF", 7) == 0) {
 		return _power_down(can->id);
 	} else if (strncmp(argv[1], "notifyOFF", 10) == 0) {
-		can->status_notify_node = false;
-		printf("[*] ihb: terminate %d", pid_notify_node);
+		if(can->status_notify_node) {
+			us_overdrive = true;
+			can->status_notify_node = false;
+			printf("[*] ihb: terminate %d\n", pid_notify_node);
+			pid_notify_node = -1;
+		} else
+			puts("[*] ihb: notify is not running");
 	} else if (strncmp(argv[1], "send2host", 10) == 0) {
 		if(can->status_notify_node) {
+			us_overdrive = true;
 			can->status_notify_node = false;
-			msg.type = CAN_MSG_START_ISOTP;
-			msg_try_send(&msg, pid_send2host);
-			puts("[*] ihb: teardown notify, start the isotp socket");
+			printf("[*] ihb: terminate %d\n", pid_notify_node);
+			pid_notify_node = -1;
 		}
-		msg.type = CAN_MSG_SEND_ISOTP;
+		msg.type = CAN_MSG_START_ISOTP;
 		msg_try_send(&msg, pid_send2host);
-		puts("[*] ihb: send istop...");
+		puts("[*] ihb: try to send a single chunk of data by isotp");
+		msg.type = CAN_MSG_SEND_ISOTP;
+		msg_send(&msg, pid_send2host);
+		msg.type = CAN_MSG_CLOSE_ISOTP;
+		msg_send(&msg, pid_send2host);
 	}  else {
 		printf("unknown command: %s\n", argv[1]);
 		return 1;
