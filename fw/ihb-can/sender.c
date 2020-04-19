@@ -4,11 +4,12 @@
  **/
 #define _GNU_SOURCE
 
+#include <inttypes.h>
+#include <string.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
+#include <errno.h>
 
 /* RIOT APIs */
 #include "can/conn/isotp.h"
@@ -25,51 +26,60 @@
 
 #include "can.h"
 
+static kernel_pid_t pid_send2host;
 static struct ihb_can_perph *can = NULL;
-#ifdef MODULE_IHBNETSIM
-static struct skin_node *sk_nodes = NULL;
-const size_t nmemb = sizeof(struct skin_node);
-const size_t buff_l = SK_N_S * nmemb;
-#endif
+bool sck_ready = false;
 
-static void serialize(void **obj)
+void ihb_isotp_send_chunks(void *in_data, size_t data_bs, size_t nmemb)
 {
+	if (!sck_ready)
+		return;
+
+	struct buffer_info *b = xmalloc(sizeof(struct buffer_info));
+	b->length = data_bs * nmemb;
+	msg_t msg;
 	void *p;
 
 	/*
 	 * Pay attention to memory consuming...
 	 */
-	p = xcalloc(SK_N_S, nmemb);
+	p = xcalloc(data_bs, nmemb);
 
-	memcpy(p, sk_nodes, buff_l);
+	memcpy(p, in_data, b->length);
 
-	DEBUG("[#] serialized, obj=%ubytes, nmemb=%ubytes\n", buff_l, nmemb);
+	DEBUG("[#] serialized, obj=%ubytes, data_bs=%dbytes nmemb=%ubytes\n",
+	      b->length, data_bs, nmemb);
 
-	*obj = p;
+	b->data = p;
+
+	msg.type = CAN_MSG_SEND_ISOTP;
+	msg.content.ptr = b;
+	msg_send (&msg, pid_send2host);
+	free(b);
 }
 
 void *_thread_send2host(void *in)
 {
 	struct ihb_structs *IHB = (struct ihb_structs *)in;
+	//struct isotp_fc_options *fc_opt;
 	struct isotp_options isotp_opt;
-	struct conn_can_isotp conn;
+	conn_can_isotp_t conn;
 	msg_t msg, msg_queue[RECEIVE_THREAD_MSG_QUEUE_SIZE];
-	bool sck_ready = false;
-	void *buff = NULL;
 	int r;
 
 	/* Saves the pointer of structs */
-	sk_nodes = IHB->sk_nodes;
-#ifdef MODULE_IHBNETSIM
 	can = IHB->can;
-#endif
+
 	/* setup the device layers message queue */
 	msg_init_queue(msg_queue, RECEIVE_THREAD_MSG_QUEUE_SIZE);
 
-	/* setup the socket  */
-	isotp_opt.tx_id = can->id;
-	isotp_opt.rx_id = 0x0;
+	/* setup the socket */
+	memset(&isotp_opt, 0, sizeof(isotp_opt));
+	isotp_opt.tx_id = 0x700;
+	isotp_opt.rx_id = 0x708;
 	isotp_opt.txpad_content = 0xCE;
+
+	pid_send2host = thread_getpid();
 
 	while (1) {
 		msg_receive(&msg);
@@ -100,28 +110,31 @@ void *_thread_send2host(void *in)
 
 				break;
 			case CAN_MSG_SEND_ISOTP:
-
 				if(!sck_ready)
 					break;
 
-				serialize(&buff);
+				struct buffer_info *b = msg.content.ptr;
 
 				/*
-				 * CAN_ISOTP_TX_DONT_WAIT make it not blocking,
+				 * When we are sending a blocking message we
+				 * adds overhead to communication because I
+				 * wait for tx response.
+				 *
+				 * CAN_ISOTP_TX_DONT_WAIT make it not blocking.
 				 */
-				r = conn_can_isotp_send(&conn, buff, buff_l, 0);
+				r = conn_can_isotp_send(&conn, b->data, b->length, 0);
 				if(r < 0) {
 					printf("[!] iso-tp send err=%d\n", r);
-					free(buff);
+					if(r == -EIO)
+						puts("[!] rcv socket not ready");
+					buffer_clean(b);
 					break;
 				}
 
-				if(r > 0 && (size_t)r != buff_l)
+				if(r > 0 && (size_t)r != b->length)
 					puts("[!] short send\n");
 
-				free(buff);
-				buff = NULL;
-
+				buffer_clean(b);
 				DEBUG("[#] The IS0-TP message has been sent\n");
 				break;
 			case CAN_MSG_CLOSE_ISOTP:
