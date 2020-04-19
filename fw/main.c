@@ -31,17 +31,15 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 static struct ihb_structs IHB;
 
-int ihb_struct_list(int argc, char **argv)
+int ihb_struct_list(__attribute__((unused)) int argc, __attribute__((unused)) char **argv)
 {
-	(void)argc;
-	(void)argv;
 	puts("[*] IHB info");
 
 #ifdef MODULE_IHBCAN
 	const struct ihb_can_perph *can = IHB.can;
 	if(IHB.can) {
 		printf("- CAN: struct ihb_can_perph address=%p, size=%ubytes",
-			IHB.can,
+			(void *)IHB.can,
 			sizeof(struct ihb_can_perph));
 
 		printf("\n\tdev=%d\n\tname=%s\n\tmcu_id=%s\n\tframe_id=%#x\n\trole=%s\n\tnotify=%s\n",
@@ -57,23 +55,23 @@ int ihb_struct_list(int argc, char **argv)
 			*IHB.pid_send2host);
 
 	} else {
-		puts("[!] BUG: this struct never should be null");
+		puts("[!] BUG: struct can never should be null");
 	}
 #endif
 #ifdef MODULE_IHBNETSIM
 	if(IHB.sk_nodes) {
 		printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
-			IHB.sk_nodes,
+			(void *)IHB.sk_nodes,
 			sizeof(struct skin_node));
 
 		printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
 			SK_T_S,
 			SK_N_S);
 
-		printf("- PIDs:\n\tNetSkinSimulator=%d\n\t", *IHB.pid_ihbnetsim);
+		printf("- PIDs:\n\tNetSkinSimulator=%d\n", *IHB.pid_ihbnetsim);
 
 	} else {
-		puts("[!] BUG: this struct never should be null");
+		puts("[!] BUG: struct sk_nodes never should be null");
 	}
 #endif
 

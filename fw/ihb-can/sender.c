@@ -116,7 +116,7 @@ void *_thread_send2host(void *in)
 					break;
 				}
 
-				if(r != buff_l)
+				if(r > 0 && (size_t)r != buff_l)
 					puts("[!] short send\n");
 
 				free(buff);

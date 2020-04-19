@@ -24,7 +24,7 @@
 #include "can/device.h"
 #include "can/can.h"
 
-#define ENABLE_DEBUG    (0)
+#define ENABLE_DEBUG    (1)
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
@@ -100,7 +100,7 @@ static uint8_t _power_down(uint8_t ifnum)
 	return 0;
 }
 
-static void *_thread_notify_node(__unused void *arg)
+static void *_thread_notify_node(__attribute__((unused)) void *arg)
 {
 	const unsigned char busy[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x55, 0x53, 0x59, 0};
 	const unsigned char idle[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0x45, 0};
@@ -182,11 +182,11 @@ static void *_thread_notify_node(__unused void *arg)
 			 == sizeof(struct can_frame))) {
 
 			if(ENABLE_DEBUG) {
-				printf("[#] ihbcan: ID=%02lx  DLC=[%x] DATA=",
+				printf("[#] ihbcan: ID=%"PRIu32"  DLC=[%u] DATA=",
 						rcv_frame->can_id,
 						rcv_frame->can_dlc);
 				for (int i = 0; i < rcv_frame->can_dlc; i++)
-					printf(" %02X", rcv_frame->data[i]);
+					printf(" %#x", rcv_frame->data[i]);
 				puts("");
 			}
 
