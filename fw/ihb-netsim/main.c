@@ -81,6 +81,8 @@ void *_skin_node_sim_thread(void *in)
 
 		if (BLOCKING) {
 			msg_send (&msg, *pid_send2host);
+			/* #TODO FIX ME */
+			xtimer_usleep(WAIT_500ms);
 		} else {
 			msg_try_send (&msg, *pid_send2host);
 			xtimer_usleep(WAIT_500ms);
