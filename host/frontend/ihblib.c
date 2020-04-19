@@ -277,7 +277,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 	return r;
 }
 
-int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
+int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 {
 	static struct can_isotp_fc_options fcopts;
 	static struct can_isotp_options opts;
@@ -325,8 +325,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d, int dest)
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(d);
-	addr.can_addr.tp.tx_id = dest;
-	addr.can_addr.tp.rx_id = 0x0;
+	addr.can_addr.tp.tx_id = 0x708;
+	addr.can_addr.tp.rx_id = 0x700;
 
 	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
 
@@ -398,7 +398,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 				puts("-------------------------------------------------------------------------------");
 			}
 
-			printf("[*] IHB data has been received, chunk=%lubytes iter=%d\r", buff_l, i);
+			printf("[*] IHB is sending data: chunk=%lubytes iter=%d\r", buff_l, i);
 _short_rcv:
 			free(p);
 		}

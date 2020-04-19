@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 		if(ihb_nodes > 0) {
 
 			/* Open and inizializate the socket CAN ISO-TP */
-			r = ihb_init_socket_can_isotp(&can_soc_isotp, perph, master_id);
+			r = ihb_init_socket_can_isotp(&can_soc_isotp, perph);
 			if (r < 0) {
 				break;
 			}
