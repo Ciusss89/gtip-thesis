@@ -7,6 +7,8 @@
 /* Riot API */
 #include "periph/pm.h"
 
+#include "tools.h"
+
 uint8_t fletcher8(const unsigned char * data, size_t n)
 {	
 	uint8_t sum = 0xff, sumB = 0xff;
@@ -66,4 +68,13 @@ char *data2str(const unsigned char *data, size_t len)
 	*p = '\0';
 
 	return r;
+}
+
+void buffer_clean(struct buffer_info *b)
+{
+	if(!b)
+		return;
+
+	b->length = 0;
+	free(b->data);
 }
