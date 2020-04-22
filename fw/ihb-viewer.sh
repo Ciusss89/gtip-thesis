@@ -19,12 +19,17 @@ CAN="can0"
 		exit 1;
 }
 
-[ -x /usr/bin/isotpsniffer ] || \
+[ -x /usr/bin/isotprecv ] || \
 {
-		echo "[!] install isotpsniffer"
+		echo "[!] install isotprecv"
 		exit 1;
 }
 
+[ -x /usr/bin/isotpperf ] || \
+{
+		echo "[!] install isotpperf"
+		exit 1;
+}
 ###############################################################################
 [ ! -z $1 ] && \
 {
@@ -51,10 +56,14 @@ do
 	gnome-terminal -q -- $CMD
 done
 
-for id in $IHB_ADDR_LIST
-do
-	CMD="isotprecv $CAN -s $id -d 0 -l"
-	echo "[*] Starting ISO-TP dump on source id 0x$id"
-	sleep 2
-	gnome-terminal -q -- $CMD
-done
+sleep 2
+echo "[*] Starting ISOTP CAN dump on periph $CAN"
+CMD="isotprecv $CAN -s 708 -d 700 -l"
+gnome-terminal -q -- $CMD
+
+sleep 2
+echo "[*] Starting ISOTP CAN perf on periph $CAN"
+CMD="isotpperf $CAN -s 700 -d 708"
+gnome-terminal -q -- $CMD
+
+echo "[*] All consoles have been starded"
