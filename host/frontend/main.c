@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 	} else {
-		fprintf(stderr, "[!] There are not IHBs available");
+		fprintf(stderr, "[!] There are not IHBs available\n");
 		goto _fail1;
 	}
 

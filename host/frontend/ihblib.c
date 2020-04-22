@@ -345,11 +345,11 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 	const size_t buff_l = SK_N_S * nmemb;
-	int r, i, j, nbytes;
+	int r, z, i, j, nbytes;
 	void *p = NULL;
 	fd_set rdfs;
 
-	i = 0;
+	z = 0;
 
 	do {
 		struct timeval timeout_config = { 5, 0 };
@@ -364,8 +364,8 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 		}
 
 		if (r == 0) {
-			fprintf(stdout, "[*] IHB failure detected: the timeout is over\n");
 			r = -ETIMEDOUT;
+			fprintf(stdout, "\n[*] IHB failure detected: %s\n", strerror(ETIMEDOUT));
 			break;
 		}
 
@@ -379,16 +379,14 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 			nbytes = read(fd, p, buff_l);
 
 			if(nbytes != buff_l) {
-				puts("");
+				fprintf(stdout, "[!] short rcv, ignore cunks #%d\n", z);
 				goto _short_rcv;
 			}
 
 			sk_nodes = (struct skin_node *)p;
 
-			i++;
-
 			if(v) {
-				puts("-----------------------------------DEBUG---------------------------------------");
+				puts("\n-----------------------------------DEBUG---------------------------------------");
 				for(i = 0; i < SK_N_S; i++) {
 					printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
 					for(j = 0; j < SK_T_S; j++)
@@ -398,7 +396,8 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 				puts("-------------------------------------------------------------------------------");
 			}
 
-			printf("[*] IHB is sending data: chunk=%lubytes iter=%d\r", buff_l, i);
+			printf("\r[*] IHB is sending data: chunk=%ubytes counts=%d", nbytes, z);
+			z++;
 _short_rcv:
 			free(p);
 		}
