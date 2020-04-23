@@ -33,9 +33,13 @@ struct skin_node *sk;
 void *_skin_node_sim_thread(void *in)
 {
 	struct ihb_structs *IHB = (struct ihb_structs *)in;
+	struct ihb_node_info *info = IHB->ihb_info;
 	sk = xcalloc(SK_N_S, data_bs);
 
 	IHB->sk_nodes = sk;
+
+	info->skin_nodes = SK_N_S;
+	info->skin_tactails = SK_T_S;
 
 	uint8_t i, j, b;
 
@@ -66,7 +70,8 @@ void *_skin_node_sim_thread(void *in)
 			}
 		}
 #ifdef MODULE_IHBCAN
-		ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
+		if (IHB->can->isotp_ready)
+			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 #endif
 		xtimer_usleep(WAIT_20ms);
 	}
