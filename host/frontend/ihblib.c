@@ -24,7 +24,11 @@
 #include <linux/can/isotp.h>
 
 #include "ihb.h"
-#include "skin.h"
+
+/* IHB device */
+#include "ihb-dev.h"
+
+/* CAN-UTILS lib */
 #include "lib.h"
 
 #define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
