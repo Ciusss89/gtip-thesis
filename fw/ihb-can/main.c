@@ -40,6 +40,7 @@ static char send2host_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_send2host;
 
 struct ihb_can_perph *can;
+struct ihb_node_info *info;
 
 /* true if runs an userspace tool */
 static bool us_overdrive = false;
@@ -240,9 +241,16 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 
 	/* Switch to transmission */
 	if(can->master && !us_overdrive) {
+		/* Open the iso-tp socket */
 		xtimer_usleep(WAIT_100ms);
 		msg.type = CAN_MSG_START_ISOTP;
 		msg_try_send(&msg, pid_send2host);
+
+		/* Send the ihb-info as first chunks */
+		xtimer_usleep (WAIT_100ms);
+		ihb_isotp_send_chunks (info, sizeof(struct ihb_node_info), 1);
+		xtimer_usleep (WAIT_100ms);
+		can->isotp_ready = true;
 	}
 
 	return NULL;
@@ -301,6 +309,8 @@ int _can_init(struct ihb_structs *IHB)
 	IHB->pid_send2host = &pid_send2host;
 	IHB->can = can;
 
+	info = IHB->ihb_info;
+
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");
 	else
@@ -312,6 +322,7 @@ int _can_init(struct ihb_structs *IHB)
 	}
 
 	can->master = false;
+	can->isotp_ready = false;
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -328,6 +339,9 @@ int _can_init(struct ihb_structs *IHB)
 	/* Save the MCU unique ID */
 	strcpy(can->controller_uid, b);
 	free(b);
+
+	strncpy(info->mcu_uid, can->controller_uid, strlen(can->controller_uid));
+	info->mcu_uid[strlen(can->controller_uid)] = '\0';
 
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID
