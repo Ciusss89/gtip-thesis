@@ -344,12 +344,42 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 	return r;
 }
 
+static void ihb_info_print (struct ihb_node_info *info)
+{
+	puts("*------------------------------------------------");
+	printf("| RIOT-OS version %s\n", info->riotos_ver);
+	printf("| IHB fw version  %s\n", info->ihb_fw_rev);
+	printf("| IHB board name  %s\n", info->mcu_board);
+	printf("| IHB mcu arch    %s\n", info->mcu_arch);
+	printf("| IHB board uid   %s\n", info->mcu_uid);
+	printf("| IHB skin nodes  %d\n", info->skin_nodes);
+	printf("| SKIN tactiles   %d\n", info->skin_tactails);
+	puts("*------------------------------------------------");
+}
+
+static void ihb_sk_nodes_print (struct skin_node *sk_nodes)
+{
+	int i, j;
+
+	puts("\n-----------------------------------DEBUG---------------------------------------");
+	for(i = 0; i < SK_N_S; i++) {
+		printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
+		for(j = 0; j < SK_T_S; j++)
+			printf(" %02x", sk_nodes[i].data[j]);
+		printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
+	}
+	puts("-------------------------------------------------------------------------------");
+}
+
 int ihb_rcv_data(int fd, void **ptr, bool v)
 {
+	const size_t info_size = sizeof(struct ihb_node_info);
+	static struct ihb_node_info *ihb_node = NULL;
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 	const size_t buff_l = SK_N_S * nmemb;
-	int r, z, i, j, nbytes;
+	int r, z, nbytes;
+	bool info_received = false;
 	void *p = NULL;
 	fd_set rdfs;
 
@@ -374,36 +404,60 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 		}
 
 		if (FD_ISSET(fd, &rdfs)) {
-			p = calloc(SK_N_S, nmemb);
-			if(!p){
-				fprintf(stderr, "[!] calloc fails\n");
-				return -1;
-			}
 
-			nbytes = read(fd, p, buff_l);
+			/* IHB sends as first the info package. */
+			if (info_received) {
 
-			if(nbytes != buff_l) {
-				fprintf(stdout, "[!] short rcv, ignore cunks #%d\n", z);
-				goto _short_rcv;
-			}
-
-			sk_nodes = (struct skin_node *)p;
-
-			if(v) {
-				puts("\n-----------------------------------DEBUG---------------------------------------");
-				for(i = 0; i < SK_N_S; i++) {
-					printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
-					for(j = 0; j < SK_T_S; j++)
-						printf(" %02x", sk_nodes[i].data[j]);
-					printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
+				p = calloc(SK_N_S, nmemb);
+				if(!p){
+					fprintf(stderr, "[!] calloc fails\n");
+					return -1;
 				}
-				puts("-------------------------------------------------------------------------------");
-			}
 
-			printf("\r[*] IHB is sending data: chunk=%ubytes counts=%d", nbytes, z);
-			z++;
-_short_rcv:
-			free(p);
+				nbytes = read(fd, p, buff_l);
+				if(nbytes != buff_l) {
+					fprintf(stdout, "[!] short rcv, ignore cunks #%d\n", z);
+					free(p);
+				}
+
+				if (p) {
+					sk_nodes = (struct skin_node *)p;
+
+					if(v)
+						ihb_sk_nodes_print(sk_nodes);
+
+					printf("\r[*] IHB is sending data: chunk=%ubytes counts=%d", nbytes, z);
+					z++;
+
+					free(p);
+				}
+
+			} else {
+
+				p = malloc(info_size);
+				if(!p){
+					fprintf(stderr, "[!] malloc fails\n");
+					return -1;
+				}
+
+				nbytes = read(fd, p, info_size);
+				if(nbytes != info_size) {
+					fprintf(stdout, "[!] short rcv\n");
+					free(p);
+				}
+
+				if (p) {
+					ihb_node = (struct ihb_node_info *)p;
+					ihb_info_print(ihb_node);
+					free(p);
+
+					/*
+					 * Switch to collect the incoming data
+					 * from IHB
+					 */
+					info_received = true;
+				}
+			}
 		}
 
 	} while (running);

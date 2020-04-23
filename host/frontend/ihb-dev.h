@@ -1,5 +1,8 @@
-#ifndef SKIN_H
-#define SKIN_H
+#ifndef IHB_DEV_H
+#define IHB_DEV_H
+/* Max lenght for info */
+#define MAX_INFO_LENGHT (31)
+
 /* SK_N_S: Skin nodes for IHB */
 #define SK_N_S (16u)
 
@@ -23,5 +26,27 @@ struct skin_node {
 	uint8_t data[SK_T_S];
 	uint16_t address;
 	bool expired;
+};
+
+/**
+ * struct ihb_node_info - contains the info of IHB node which are sent to HOST
+ * @mcu_uid: MCU's unique ID
+ * @mcu_arch: MCU's architecture
+ * @mcu_board: IHB board name
+ * @riotos_ver: RIOT-OS release version
+ * @ihb_fw_rev: IHB firmware release version
+ * @skin_nodes: Number of skin nodes per IHB
+ * @skin_tactails: Number of tactile sensors per skin node
+ */
+struct ihb_node_info {
+	char mcu_uid[MAX_INFO_LENGHT + 1];
+	char mcu_arch[MAX_INFO_LENGHT + 1];
+	char mcu_board[MAX_INFO_LENGHT + 1];
+
+	char riotos_ver[MAX_INFO_LENGHT + 1];
+	char ihb_fw_rev[MAX_INFO_LENGHT + 1];
+
+	uint8_t skin_nodes;
+	uint8_t skin_tactails;
 };
 #endif
