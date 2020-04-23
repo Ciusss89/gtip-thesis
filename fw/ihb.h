@@ -70,6 +70,7 @@ struct skin_node {
  * @id: identifier number of the MCU's can controller
  * @frame_id: CAN frame ID, it's obtainded by the MCU unique ID
  * @status_notify_node: if true the IHB node is announcing itself on CAN bus
+ * @isotp_ready: true when the IHB can send the isotp chunks to host
  * @master: true when the IHB node is master, false otherwise.
  */
 struct ihb_can_perph {
@@ -78,12 +79,14 @@ struct ihb_can_perph {
 	uint8_t id;
 	uint8_t frame_id;
 	bool status_notify_node;
+	bool isotp_ready;
 	bool master;
 };
 
 #define IHB_THREAD_HELP "ihb-can driver"
 #endif
 
+#define MAX_INFO_LENGHT (31)
 /**
  * struct ihb_structs - it's a containter of pointers
  *
@@ -99,6 +102,29 @@ struct ihb_structs {
 	struct skin_node *sk_nodes;
 	kernel_pid_t *pid_ihbnetsim;
 #endif
+	struct ihb_node_info *ihb_info;
+};
+
+/**
+ * struct ihb_node_info - contains the info of IHB node which are sent to HOST
+ * @mcu_uid: MCU's unique ID
+ * @mcu_arch: MCU's architecture
+ * @mcu_board: IHB board name
+ * @riotos_ver: RIOT-OS release version
+ * @ihb_fw_rev: IHB firmware release version
+ * @skin_nodes: Number of skin nodes per IHB
+ * @skin_tactails: Number of tactile sensors per skin node
+ */
+struct ihb_node_info {
+	char mcu_uid[MAX_INFO_LENGHT + 1];
+	char mcu_arch[MAX_INFO_LENGHT + 1];
+	char mcu_board[MAX_INFO_LENGHT + 1];
+
+	char riotos_ver[MAX_INFO_LENGHT + 1];
+	char ihb_fw_rev[MAX_INFO_LENGHT + 1];
+
+	uint8_t skin_nodes;
+	uint8_t skin_tactails;
 };
 
 #endif

@@ -3,10 +3,10 @@
  * Created:	2020
  *
  */
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <inttypes.h>
 
 /* API's RIOT-OS */
 #include "shell.h"
@@ -25,6 +25,12 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 #ifdef MODULE_IHBCAN
 #include "ihb-can/can.h"
+#endif
+
+#ifdef MODULE_IHBCAN
+#include "ihb-tools/tools.h"
+#else
+#error "need ihb-tools lib"
 #endif
 
 #include "ihb.h"
@@ -100,7 +106,17 @@ static char line_buf[SHELL_DEFAULT_BUFSIZE];
  */
 static int ihb_init(void)
 {
+	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
 	int r;
+
+	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU));
+	IHB.ihb_info->mcu_arch[strlen(RIOT_MCU)] = '\0';
+
+	strncpy(IHB.ihb_info->mcu_board, RIOT_BOARD, strlen(RIOT_BOARD));
+	IHB.ihb_info->mcu_board[strlen(RIOT_BOARD)] = '\0';
+
+	strncpy(IHB.ihb_info->riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION));
+	IHB.ihb_info->riotos_ver[strlen(RIOT_VERSION)] = '\0';
 
 #ifdef MODULE_UPTIME
 	puts("[*] MODULE_UPTIME");
