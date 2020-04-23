@@ -81,8 +81,6 @@ int ihb_struct_list(__attribute__((unused)) int argc, __attribute__((unused)) ch
 	}
 #endif
 
-	/* !TODO add fw versioning and others info */
-
 	return 0;
 }
 
@@ -117,6 +115,9 @@ static int ihb_init(void)
 
 	strncpy(IHB.ihb_info->riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION));
 	IHB.ihb_info->riotos_ver[strlen(RIOT_VERSION)] = '\0';
+
+	strncpy(IHB.ihb_info->ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER));
+	IHB.ihb_info->ihb_fw_rev[strlen(IHB_FW_VER)] = '\0';
 
 #ifdef MODULE_UPTIME
 	puts("[*] MODULE_UPTIME");

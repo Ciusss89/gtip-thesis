@@ -10,6 +10,10 @@ BOARD ?= nucleo-l476rg
 #
 RIOTBASE ?= $(CURDIR)/../../RIOT/
 
+## Firmware version
+#.
+CFLAGS += -DIHB_FW_VER=\"3.0.0.rc1-$(shell date --iso=date)\"
+
 ## Chose the debug level: LOG_NONE, LOG_WARNING, LOG_ERROR, LOG_DEBUG, LOG_ALL
 CFLAGS += -DLOG_LEVEL=LOG_NONE
 
