@@ -68,7 +68,7 @@ void *_skin_node_sim_thread(void *in)
 #ifdef MODULE_IHBCAN
 		ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 #endif
-		xtimer_usleep(WAIT_100ms);
+		xtimer_usleep(WAIT_20ms);
 	}
 
 	return NULL;
