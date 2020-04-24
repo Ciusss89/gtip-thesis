@@ -1,6 +1,6 @@
 ## App name
 #
-APPLICATION = ihb
+APPLICATION = IHB.GTip
 
 ## Target
 #
@@ -35,10 +35,6 @@ USEMODULE += random
 
 FEATURES_REQUIRED += periph_can
 FEATURES_REQUIRED += periph_gpio_irq
-
-CFLAGS += -DGNRC_PKTBUF_SIZE=4096
-CFLAGS += -DCAN_PKT_BUF_SIZE=64
-CFLAGS += -DCAN_ROUTER_MAX_FILTER=32
 
 ## Custom modules
 #
