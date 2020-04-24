@@ -107,6 +107,8 @@ static int ihb_init(void)
 	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
 	int r;
 
+	IHB.ihb_info->isotp_timeo = ISOTP_TIMEOUT_DEF;
+
 	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU));
 	IHB.ihb_info->mcu_arch[strlen(RIOT_MCU)] = '\0';
 
