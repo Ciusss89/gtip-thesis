@@ -18,7 +18,7 @@ LIBS ?=
 
 EXTRA_CFLAGS += \
 		-Iinclude \
-		-D IHB_VERSION="\"$(VERSION)\""
+		-D IHBTOOL_VER=\"3.0.0.rc1-$(shell date --iso=date)\"
 
 DEPS = ihb.h lib.h
 OBJ = main.o ihblib.o lib.o

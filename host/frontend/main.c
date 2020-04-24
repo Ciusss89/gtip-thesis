@@ -20,7 +20,7 @@ void help(char *prg)
 {
 	fprintf(stdout, "\nUsage: %s [options] -d CAN interface\n", prg);
 	fprintf(stdout, "         -v    Enable the verbose mode\n");
-	fprintf(stdout, "Version: %s\n", IHB_VERSION);
+	fprintf(stdout, "Version: %s\n", IHBTOOL_VER);
 	fprintf(stdout, "\n");
 }
 
