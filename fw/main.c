@@ -109,16 +109,16 @@ static int ihb_init(void)
 
 	IHB.ihb_info->isotp_timeo = ISOTP_TIMEOUT_DEF;
 
-	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU));
+	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU) + 1);
 	IHB.ihb_info->mcu_arch[strlen(RIOT_MCU)] = '\0';
 
-	strncpy(IHB.ihb_info->mcu_board, RIOT_BOARD, strlen(RIOT_BOARD));
+	strncpy(IHB.ihb_info->mcu_board, RIOT_BOARD, strlen(RIOT_BOARD) + 1);
 	IHB.ihb_info->mcu_board[strlen(RIOT_BOARD)] = '\0';
 
-	strncpy(IHB.ihb_info->riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION));
+	strncpy(IHB.ihb_info->riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION) + 1);
 	IHB.ihb_info->riotos_ver[strlen(RIOT_VERSION)] = '\0';
 
-	strncpy(IHB.ihb_info->ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER));
+	strncpy(IHB.ihb_info->ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER) + 1);
 	IHB.ihb_info->ihb_fw_rev[strlen(IHB_FW_VER)] = '\0';
 
 #ifdef MODULE_UPTIME
