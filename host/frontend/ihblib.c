@@ -354,17 +354,18 @@ static void ihb_info_print (struct ihb_node_info *info)
 	printf("| IHB board uid   %s\n", info->mcu_uid);
 	printf("| IHB skin nodes  %d\n", info->skin_nodes);
 	printf("| SKIN tactiles   %d\n", info->skin_tactails);
+	printf("| ISO TP timeout  %u\n", info->isotp_timeo);
 	puts("*------------------------------------------------");
 }
 
-static void ihb_sk_nodes_print (struct skin_node *sk_nodes)
+static void ihb_sk_nodes_print (struct skin_node *sk_nodes, size_t sk, size_t tcl)
 {
-	int i, j;
+	uint8_t i, j;
 
 	puts("\n-----------------------------------DEBUG---------------------------------------");
-	for(i = 0; i < SK_N_S; i++) {
+	for(i = 0; i < sk; i++) {
 		printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
-		for(j = 0; j < SK_T_S; j++)
+		for(j = 0; j < tcl; j++)
 			printf(" %02x", sk_nodes[i].data[j]);
 		printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
 	}
@@ -375,9 +376,13 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 {
 	const size_t info_size = sizeof(struct ihb_node_info);
 	static struct ihb_node_info *ihb_node = NULL;
+
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
-	const size_t buff_l = SK_N_S * nmemb;
+
+	struct timeval timeout_config;
+
+	size_t buff_l = 0, sk_nodes_count = 0, sk_tacts = 0;
 	int r, z, nbytes;
 	bool info_received = false;
 	void *p = NULL;
@@ -386,7 +391,10 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	z = 0;
 
 	do {
-		struct timeval timeout_config = { 5, 0 };
+		/* Initial timeout for ISO TP transmissions */
+		timeout_config.tv_sec  = 5;
+		timeout_config.tv_usec = 0;
+
 		FD_ZERO(&rdfs);
 		FD_SET(fd, &rdfs);
 
@@ -424,7 +432,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 					sk_nodes = (struct skin_node *)p;
 
 					if(v)
-						ihb_sk_nodes_print(sk_nodes);
+						ihb_sk_nodes_print(sk_nodes, sk_nodes_count, sk_tacts);
 
 					printf("\r[*] IHB is sending data: chunk=%ubytes counts=%d", nbytes, z);
 					z++;
@@ -448,6 +456,16 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 
 				if (p) {
 					ihb_node = (struct ihb_node_info *)p;
+
+					if (ihb_node->skin_nodes < MAX_SK_NODES)
+						sk_nodes_count = ihb_node->skin_nodes;
+
+					if (ihb_node->skin_tactails < MAX_SK_TACTAILS)
+						sk_tacts = ihb_node->skin_tactails;
+
+					timeout_config.tv_sec = ihb_node->isotp_timeo;
+
+					buff_l = nmemb * sk_nodes_count;
 					ihb_info_print(ihb_node);
 					free(p);
 

@@ -3,6 +3,9 @@
 /* Max lenght for info */
 #define MAX_INFO_LENGHT (31)
 
+#define MAX_SK_NODES (256u)
+#define MAX_SK_TACTAILS (16u)
+
 /* SK_N_S: Skin nodes for IHB */
 #define SK_N_S (16u)
 
@@ -37,6 +40,7 @@ struct skin_node {
  * @ihb_fw_rev: IHB firmware release version
  * @skin_nodes: Number of skin nodes per IHB
  * @skin_tactails: Number of tactile sensors per skin node
+ * @isotp_timeo: timeout for ISO TP transmissions
  */
 struct ihb_node_info {
 	char mcu_uid[MAX_INFO_LENGHT + 1];
@@ -48,5 +52,7 @@ struct ihb_node_info {
 
 	uint8_t skin_nodes;
 	uint8_t skin_tactails;
+
+	uint8_t isotp_timeo;
 };
 #endif
