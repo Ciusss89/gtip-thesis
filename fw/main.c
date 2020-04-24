@@ -153,10 +153,12 @@ static int ihb_init(void)
 
 int main(void)
 {
-	printf("RIOT-OS=%s App=%s Board=%s MCU=%s\n\r", RIOT_VERSION,
-							RIOT_APPLICATION,
-							RIOT_BOARD,
-							RIOT_MCU);
+	printf("RIOT-OS=%s App=%s Board=%s MCU=%s, IHBv=%s\n\r",
+		RIOT_VERSION,
+		RIOT_APPLICATION,
+		RIOT_BOARD,
+		RIOT_MCU,
+		IHB_FW_VER);
 
 	if(ihb_init() < 0)
 		puts("[!] IHB: init of system has falied");
