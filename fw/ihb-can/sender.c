@@ -124,9 +124,7 @@ void *_thread_send2host(void *in)
 				 */
 				r = conn_can_isotp_send(&conn, b->data, b->length, 0);
 				if(r < 0) {
-					printf("[!] iso-tp send err=%d\n", r);
-					if(r == -EIO)
-						puts("[!] rcv socket not ready");
+					printf("[!] iso-tp send failure: err=%d\n", r);
 					buffer_clean(b);
 					break;
 				}
