@@ -16,6 +16,9 @@
 #define WAIT_5ms	(5LU * US_PER_MS)       /* delay of 005ms */
 
 #ifdef MODULE_IHBNETSIM
+#define MAX_SK_NODES (256u)
+#define MAX_SK_TACTAILS (16u)
+
 /* SK_N_S: Skin nodes for IHB */
 #define SK_N_S (16u)
 
