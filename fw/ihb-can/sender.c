@@ -32,7 +32,7 @@ bool sck_ready = false;
 
 void ihb_isotp_send_chunks(void *in_data, size_t data_bs, size_t nmemb)
 {
-	if (!sck_ready)
+	if (!sck_ready || !in_data || data_bs == 0 || nmemb < 1)
 		return;
 
 	struct buffer_info *b = xmalloc(sizeof(struct buffer_info));
