@@ -27,7 +27,7 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 #include "ihb-can/can.h"
 #endif
 
-#ifdef MODULE_IHBCAN
+#ifdef MODULE_IHBTOOLS
 #include "ihb-tools/tools.h"
 #else
 #error "need ihb-tools lib"
@@ -106,10 +106,9 @@ static int ihb_init(void)
 {
 	memset(&IHB, 0, sizeof(struct ihb_structs));
 	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
-	int r;
-
+#ifdef MODULE_IHBCAN
 	IHB.ihb_info->isotp_timeo = ISOTP_TIMEOUT_DEF;
-
+#endif
 	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU) + 1);
 	IHB.ihb_info->mcu_arch[strlen(RIOT_MCU)] = '\0';
 
@@ -146,12 +145,10 @@ static int ihb_init(void)
 #ifdef MODULE_IHBCAN
 	IHB.can = NULL;
 	puts("[*] MODULE_IHBCAN");
-	r = _can_init(&IHB);
-	if (r != 0)
-		puts("[!] init of the CAN submodule has failed");
+	return _can_init(&IHB);
 #endif
 
-	return r;
+	return 0;
 }
 
 int main(void)
