@@ -39,6 +39,8 @@ void ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb)
 	b->length = data_bs * nmemb;
 	msg_t msg;
 
+	memset(&msg, 0, sizeof(msg));
+
 	/*
 	 * Pay attention to memory consuming...
 	 */
@@ -66,6 +68,8 @@ void *_thread_send2host(void *in)
 	conn_can_isotp_t conn;
 	msg_t msg, msg_queue[RECEIVE_THREAD_MSG_QUEUE_SIZE];
 	int r;
+
+	memset(&msg, 0, sizeof(msg));
 
 	/* Saves the pointer of structs */
 	can = IHB->can;

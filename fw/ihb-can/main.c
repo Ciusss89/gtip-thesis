@@ -115,6 +115,8 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	msg_t msg;
 	int r;
 
+	memset(&msg, 0, sizeof(msg));
+
 	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
 	if (r < 0) {
 		printf("[!] cannot create the CAN socket: err=%d\n", r);
@@ -258,8 +260,6 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 
 int _ihb_can_handler(int argc, char **argv)
 {
-	msg_t msg;
-
 	if (argc < 2) {
 		_usage();
 		return 1;

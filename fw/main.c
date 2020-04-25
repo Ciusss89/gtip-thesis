@@ -104,6 +104,7 @@ static char line_buf[SHELL_DEFAULT_BUFSIZE];
  */
 static int ihb_init(void)
 {
+	memset(&IHB, 0, sizeof(struct ihb_structs));
 	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
 	int r;
 
