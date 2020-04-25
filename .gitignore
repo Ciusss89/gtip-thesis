@@ -1,7 +1,7 @@
 # Riot-os build dir
-./fw/bin/
+fw/bin
 
 # Frontend:  object/Lib files
-./host/frontend/*.o
-./host/frontend/.obj
-./host/frontend/.lo
+host/frontend/*.o
+host/frontend/.obj
+host/frontend/.lo
