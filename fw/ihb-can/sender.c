@@ -26,11 +26,11 @@
 
 #include "can.h"
 
-static kernel_pid_t pid_send2host;
 static struct ihb_can_perph *can = NULL;
+static kernel_pid_t pid_send2host;
 bool sck_ready = false;
 
-void ihb_isotp_send_chunks(void *in_data, size_t data_bs, size_t nmemb)
+void ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb)
 {
 	if (!sck_ready || !in_data || data_bs == 0 || nmemb < 1)
 		return;
@@ -38,24 +38,21 @@ void ihb_isotp_send_chunks(void *in_data, size_t data_bs, size_t nmemb)
 	struct buffer_info *b = xmalloc(sizeof(struct buffer_info));
 	b->length = data_bs * nmemb;
 	msg_t msg;
-	void *p;
 
 	/*
 	 * Pay attention to memory consuming...
 	 */
-	p = xcalloc(data_bs, nmemb);
+	b->data = xcalloc(data_bs, nmemb);
+	memcpy(b->data, in_data, b->length);
 
-	memcpy(p, in_data, b->length);
-
-	DEBUG("[#] serialized, obj=%ubytes, data_bs=%dbytes nmemb=%ubytes\n",
-	      b->length, data_bs, nmemb);
-
-	b->data = p;
+	DEBUG("[#] Chunk=%ubytes, BlockSize=%dbytes Amount=%u add=%p\n",
+	      b->length, data_bs, nmemb, b->data);
 
 	msg.type = CAN_MSG_SEND_ISOTP;
 	msg.content.ptr = b;
 	msg_send (&msg, pid_send2host);
-	free(b);
+
+	buffer_clean(b);
 }
 
 void *_thread_send2host(void *in)
@@ -114,7 +111,6 @@ void *_thread_send2host(void *in)
 					break;
 
 				struct buffer_info *b = msg.content.ptr;
-
 				/*
 				 * When we are sending a blocking message we
 				 * adds overhead to communication because I
@@ -122,17 +118,17 @@ void *_thread_send2host(void *in)
 				 *
 				 * CAN_ISOTP_TX_DONT_WAIT make it not blocking.
 				 */
-				r = conn_can_isotp_send(&conn, b->data, b->length, 0);
+				r = conn_can_isotp_send(&conn,
+							b->data,
+							b->length, 0);
 				if(r < 0) {
 					printf("[!] iso-tp send failure: err=%d\n", r);
-					buffer_clean(b);
 					break;
 				}
 
 				if(r > 0 && (size_t)r != b->length)
 					puts("[!] short send\n");
 
-				buffer_clean(b);
 				DEBUG("[#] The IS0-TP message has been sent\n");
 				break;
 			case CAN_MSG_CLOSE_ISOTP:

@@ -11,7 +11,7 @@
  */
 struct buffer_info {
 	size_t length;
-	void **data;
+	void *data;
 };
 
 void oom(void);

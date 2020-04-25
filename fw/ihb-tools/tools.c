@@ -76,5 +76,6 @@ void buffer_clean(struct buffer_info *b)
 		return;
 
 	b->length = 0;
-	free(b->data);
+	if(b->data)
+		free(b->data);
 }
