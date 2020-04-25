@@ -52,7 +52,10 @@ void ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb)
 	msg.content.ptr = b;
 	msg_send (&msg, pid_send2host);
 
-	buffer_clean(b);
+	/*
+	 * The buffer should be free here
+	 * buffer_clean(b);
+	 */
 }
 
 void *_thread_send2host(void *in)
@@ -111,6 +114,7 @@ void *_thread_send2host(void *in)
 					break;
 
 				struct buffer_info *b = msg.content.ptr;
+
 				/*
 				 * When we are sending a blocking message we
 				 * adds overhead to communication because I
@@ -123,13 +127,16 @@ void *_thread_send2host(void *in)
 							b->length, 0);
 				if(r < 0) {
 					printf("[!] iso-tp send failure: err=%d\n", r);
+					 buffer_clean(b);
 					break;
 				}
 
 				if(r > 0 && (size_t)r != b->length)
-					puts("[!] short send\n");
+					printf("[!] short send: sent %d/%ubytes\n",
+							r, b->length);
 
 				DEBUG("[#] The IS0-TP message has been sent\n");
+				buffer_clean(b);
 				break;
 			case CAN_MSG_CLOSE_ISOTP:
 
