@@ -20,11 +20,14 @@
 #define MAX_SK_TACTAILS (16u)
 
 /* SK_N_S: Skin nodes for IHB */
-#define SK_N_S (16u)
+#ifndef SK_N_S
+#define SK_N_S (8u)
+#endif
 
 /* SK_T_S: Skin Tactile sensors per skin node */
+#ifndef SK_T_S
 #define SK_T_S (12u)
-
+#endif
 /**
  * struct skin_node - represent the collected data that is incoming by skin nodes
  *
@@ -60,8 +63,9 @@ struct skin_node {
 #define CAN_C (0)
 
 /* timeout for ISO TP transmissions */
+#ifndef ISOTP_TIMEOUT_DEF
 #define ISOTP_TIMEOUT_DEF (3u)
-
+#endif
 /**
  * struct skin_node - contains all data that are used by ihb-can driver
  *

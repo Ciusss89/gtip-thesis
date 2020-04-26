@@ -11,8 +11,20 @@ BOARD ?= nucleo-l476rg
 RIOTBASE ?= $(CURDIR)/../../RIOT/
 
 ## Firmware version
-#.
+#
 CFLAGS += -DIHB_FW_VER=\"3.0.0.rc1-$(shell date --iso=date)\"
+
+## Skin nodes for IHB
+#
+CFLAGS += -DSK_N_S=16
+
+## Tactile sensors per skin node
+#
+CFLAGS += -DSK_T_S=12
+
+## Timeout for ISO TP transmissions
+#
+CFLAGS += -DISOTP_TIMEOUT_DEF=2
 
 #CFLAGS += -DDEVELHELP
 
