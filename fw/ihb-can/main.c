@@ -36,9 +36,6 @@
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
 
-static char send2host_stack[THREAD_STACKSIZE_MEDIUM];
-static kernel_pid_t pid_send2host;
-
 struct ihb_can_perph *can;
 struct ihb_node_info *info;
 
@@ -111,10 +108,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
 	conn_can_raw_t conn;
-	msg_t msg;
 	int r;
-
-	memset(&msg, 0, sizeof(msg));
 
 	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
 	if (r < 0) {
@@ -244,12 +238,11 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	if(can->master && !us_overdrive) {
 		/* Open the iso-tp socket */
 		xtimer_usleep(WAIT_100ms);
-		msg.type = CAN_MSG_START_ISOTP;
-		msg_try_send(&msg, pid_send2host);
+		ihb_isotp_init(can->id);
 
 		/* Send the ihb-info as first chunks */
 		xtimer_usleep (WAIT_100ms);
-		ihb_isotp_send_chunks (info, sizeof(struct ihb_node_info), 1);
+		ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
 		xtimer_usleep (WAIT_100ms);
 		can->isotp_ready = true;
 	}
@@ -291,7 +284,6 @@ int _can_init(struct ihb_structs *IHB)
 	can = xmalloc(sizeof(struct ihb_can_perph));
 
 	IHB->pid_notify_node = &pid_notify_node;
-	IHB->pid_send2host = &pid_send2host;
 	IHB->can = can;
 
 	info = IHB->ihb_info;
@@ -339,17 +331,6 @@ int _can_init(struct ihb_structs *IHB)
 	if(r != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
-		return 1;
-	}
-
-	pid_send2host = thread_create(send2host_stack,
-				      sizeof(send2host_stack),
-				      THREAD_PRIORITY_MAIN - 2,
-				      THREAD_CREATE_WOUT_YIELD,
-				      _thread_send2host, (void *)IHB,
-				      "ihb send to host");
-	if(pid_send2host < KERNEL_PID_UNDEF) {
-		puts("[!] cannot create thread send to host");
 		return 1;
 	}
 

@@ -5,8 +5,13 @@
 #include <stdlib.h>
 #include "ihb.h"
 
-void *_thread_send2host(void *IHB);
+/* ihb-can/main.c */
 int _can_init(struct ihb_structs *IHB);
 int _ihb_can_handler(int argc, char **argv);
-void ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb);
+
+/* ihb-can/sender.c */
+int ihb_isotp_close(void);
+int ihb_isotp_init(uint8_t can_num);
+int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb);
+
 #endif

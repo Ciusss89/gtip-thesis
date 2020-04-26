@@ -56,9 +56,7 @@ int ihb_struct_list(__attribute__((unused)) int argc, __attribute__((unused)) ch
 			can->master ? "master" : "idle",
 			can->status_notify_node ? "is running" : "no");
 
-		printf("- PIDs:\n\tnotify=%d\n\tsend2host=%d\n",
-			*IHB.pid_notify_node,
-			*IHB.pid_send2host);
+		printf("- PIDs:\n\tnotify=%d\n", *IHB.pid_notify_node);
 
 	} else {
 		puts("[!] BUG: struct can never should be null");
