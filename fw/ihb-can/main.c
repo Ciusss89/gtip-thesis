@@ -241,10 +241,15 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		ihb_isotp_init(can->id);
 
 		/* Send the ihb-info as first chunks */
-		xtimer_usleep (WAIT_100ms);
-		ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
-		xtimer_usleep (WAIT_100ms);
-		can->isotp_ready = true;
+		xtimer_usleep (WAIT_500ms);
+		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
+		if (r > 0) {
+			can->isotp_ready = true;
+			puts("[*] ihb: ready to send data");
+		} else {
+			/* !TODO: Handle this patch code */
+			ihb_isotp_close();
+		}
 	}
 
 	return NULL;
