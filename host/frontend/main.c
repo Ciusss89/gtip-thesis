@@ -20,6 +20,7 @@ void help(char *prg)
 {
 	fprintf(stdout, "\nUsage: %s [options] -d CAN interface\n", prg);
 	fprintf(stdout, "         -v    Enable the verbose mode\n");
+	fprintf(stdout, "         -m    Enable the speed meter\n");
 	fprintf(stdout, "Version: %s\n", IHBTOOL_VER);
 	fprintf(stdout, "\n");
 }
@@ -46,7 +47,7 @@ void _signals(const int signo)
 
 int main(int argc, char **argv)
 {
-	bool verbose = false, isotp_fails = false;
+	bool verbose = false, isotp_fails = false, perf = false;
 	int can_soc_raw = 0, can_soc_isotp = 0;
 	uint8_t master_id = 255, ihb_nodes = 0;
 	char *perph = NULL;
@@ -59,7 +60,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, _signals);
 	signal(SIGINT, _signals);
 
-	while ((c = getopt(argc, argv, "d:h:v")) != -1) {
+	while ((c = getopt(argc, argv, "d:h:v:m")) != -1) {
 		switch (c) {
 			case 'd':
 				perph = optarg;
@@ -70,6 +71,9 @@ int main(int argc, char **argv)
 				break;
 			case 'v':
 				verbose = true;
+				break;
+			case 'm':
+				perf = true;
 				break;
 			case '?':
 			default:
@@ -133,7 +137,7 @@ int main(int argc, char **argv)
 			}
 
 			/* Stat the IHB data acquisition */
-			r = ihb_rcv_data(can_soc_isotp, &data, verbose);
+			r = ihb_rcv_data(can_soc_isotp, &data, verbose, perf);
 
 			/*
 			 * If the IHB goes in timeout, it has passed away...

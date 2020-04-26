@@ -22,6 +22,7 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <linux/can/isotp.h>
+#include <linux/sockios.h>
 
 #include "ihb.h"
 
@@ -344,7 +345,7 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 	return r;
 }
 
-static void ihb_info_print (struct ihb_node_info *info)
+static void ihb_info_print(struct ihb_node_info *info)
 {
 	puts("*------------------------------------------------");
 	printf("| RIOT-OS version %s\n", info->riotos_ver);
@@ -358,7 +359,7 @@ static void ihb_info_print (struct ihb_node_info *info)
 	puts("*------------------------------------------------");
 }
 
-static void ihb_sk_nodes_print (struct skin_node *sk_nodes, size_t sk, size_t tcl)
+static void ihb_sk_nodes_print(struct skin_node *sk_nodes, size_t sk, size_t tcl)
 {
 	uint8_t i, j;
 
@@ -372,7 +373,46 @@ static void ihb_sk_nodes_print (struct skin_node *sk_nodes, size_t sk, size_t tc
 	puts("-------------------------------------------------------------------------------");
 }
 
-int ihb_rcv_data(int fd, void **ptr, bool v)
+static void ihb_isotp_perf(struct timeval _end_tv,
+			   struct timeval _start_tv,
+			   int bytes,
+			   char **_buff,
+			   bool perf)
+{
+	struct timeval diff_tv;
+	char *buff = NULL;
+
+	if(!perf) {
+		asprintf(&buff, " ");
+		*_buff = buff;
+		return;
+	}
+
+	/* calculate time */
+	diff_tv.tv_sec  = _end_tv.tv_sec  - _start_tv.tv_sec;
+	diff_tv.tv_usec = _end_tv.tv_usec - _start_tv.tv_usec;
+
+	//printf("---><%ld.%06ld>", (long int)(diff_tv.tv_sec), (long int)(diff_tv.tv_usec));
+
+	if (diff_tv.tv_usec < 0)
+		diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
+	if (diff_tv.tv_sec < 0)
+		diff_tv.tv_sec = diff_tv.tv_usec = 0;
+
+	if (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000){
+		asprintf(&buff, " time %ld.%06lds, => %lu byte/s ", diff_tv.tv_sec, diff_tv.tv_usec,
+				(bytes * 1000) /
+				(diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
+	} else {
+		asprintf(&buff, "(no time available)");
+	}
+
+	*_buff = buff;
+
+	return;
+}
+
+int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 {
 	const size_t info_size = sizeof(struct ihb_node_info);
 	static struct ihb_node_info *ihb_node = NULL;
@@ -380,11 +420,12 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 	const size_t nmemb = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 
-	struct timeval timeout_config;
+	struct timeval timeout_config, start_tv, end_tv;
 
 	size_t buff_l = 0, sk_nodes_count = 0, sk_tacts = 0;
 	int r, z, nbytes;
 	bool info_received = false;
+	char *buff = NULL;
 	void *p = NULL;
 	fd_set rdfs;
 
@@ -422,7 +463,10 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 					return -1;
 				}
 
+				ioctl(fd, SIOCGSTAMP, &start_tv);
 				nbytes = read(fd, p, buff_l);
+				ioctl(fd, SIOCGSTAMP, &end_tv);
+
 				if(nbytes != buff_l) {
 					fprintf(stdout, "[!] short rcv, ignore cunks #%d\n", z);
 					free(p);
@@ -434,10 +478,17 @@ int ihb_rcv_data(int fd, void **ptr, bool v)
 					if(v)
 						ihb_sk_nodes_print(sk_nodes, sk_nodes_count, sk_tacts);
 
-					printf("\r[*] IHB is sending data: chunk=%ubytes counts=%d", nbytes, z);
+					ihb_isotp_perf(end_tv, start_tv, nbytes, &buff, perf);
+
+					fprintf(stdout, "\r[*] IHB is sending data: chunk=%ubytes counts=%d%s",
+						nbytes,
+						z,
+						buff);
+
 					z++;
 
 					free(p);
+					free(buff);
 				}
 
 			} else {
