@@ -61,7 +61,7 @@ int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 	if(find)
 		return 0;
 
-	fprintf(stderr, "[@] BUG: Node %#x not in list\n", ihb->canID);
+	fprintf(stderr, BOLDCYAN"[@] BUG: Node %#x not in list\n"RESET, ihb->canID);
 
 	return -1;
 }
@@ -94,7 +94,7 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 		return 0;
 	}
 
-	fprintf(stderr, "[@] BUG: fallback fails..\n");
+	fprintf(stderr, BOLDCYAN"[@] BUG: fallback fails..\n"RESET);
 	return -1;
 }
 
@@ -115,7 +115,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 				r = asprintf(&cmd, "%03x#4948422D42555359",
 					     ihb->canID);
 				if (r < 0) {
-					fprintf(stderr, "[!] asprintf fails\n");
+					fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
 					break;
 				}
 				ihb->best = true;
@@ -124,7 +124,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 				r = asprintf(&cmd, "%03x#4948422D49444C45",
 					     ihb->canID);
 				if (r < 0) {
-					fprintf(stderr, "[!] asprintf fails\n");
+					fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
 					break;
 				}
 				ihb->best = false;
@@ -177,7 +177,8 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 		r = select(fd + 1, &rdfs, NULL, NULL, &timeout_config);
 
 		if (r < 0) {
-			fprintf(stderr, "[!] can_soc_fd not ready: %s\n", strerror(errno));
+			fprintf(stderr, BOLDRED"[!] can_soc_fd not ready: %s\n"RESET,
+					strerror(errno));
 			discovery = false;
 			continue;
 		}
@@ -192,7 +193,8 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 			recv_bytes = read(fd, &frame_rd, sizeof(struct can_frame));
 			if (!recv_bytes) {
-				fprintf(stderr, "[!] read failure: %s\n", strerror(errno));
+				fprintf(stderr, BOLDRED"[!] read failure: %s\n"RESET,
+						strerror(errno));
 				continue;
 			}
 
@@ -212,7 +214,7 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 					ihb = (struct ihb_node *)malloc(sizeof(struct ihb_node));
 					if (ihb == NULL) {
-						fprintf(stderr, "[!] malloc failure:\n");
+						fprintf(stderr, BOLDRED"[!] malloc failure:\n"RESET);
 						discovery = false;
 						return -1;
 					}
@@ -253,7 +255,8 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 
 	*can_soc_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 	if (*can_soc_fd < 0) {
-		fprintf(stderr, "[!] socket open failure! %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] socket open failure! %s\n"RESET,
+				strerror(errno));
 		return -errno;
 	}
 
@@ -263,7 +266,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 
 	r = ioctl(*can_soc_fd, SIOCGIFINDEX, &ifr);
 	if (r < 0) {
-		fprintf(stderr, "[!] ioctl has failed: %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] ioctl has failed: %s\n"RESET, strerror(errno));
 		return -errno;
 	} else {
 		addr.can_ifindex = ifr.ifr_ifindex;
@@ -275,7 +278,7 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
 
-		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] bind has failed: %s\n"RESET, strerror(errno));
 		return -errno;
 	}
 
@@ -300,7 +303,7 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 
 	*can_soc_fd = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP);
 	if (*can_soc_fd < 0) {
-		fprintf(stderr, "[!] socket open failure! %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] socket open failure! %s\n"RESET, strerror(errno));
 		return -errno;
 	}
 
@@ -312,7 +315,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
-		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] bind has failed: %s\n"RESET,
+				strerror(errno));
 		return -errno;
 	}
 
@@ -324,7 +328,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
-		fprintf(stderr, "bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"bind has failed: %s\n"RESET,
+				strerror(errno));
 		return -errno;
 	}
 
@@ -338,7 +343,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);
-		fprintf(stderr, "[!] bind has failed: %s\n", strerror(errno));
+		fprintf(stderr, BOLDRED"[!] bind has failed: %s\n"RESET,
+				strerror(errno));
 		return -errno;
 	}
 
@@ -442,13 +448,15 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 		r = select(fd + 1, &rdfs, NULL, NULL, &timeout_config);
 
 		if (r < 0) {
-			fprintf(stderr, "[!]socket not ready: %s\n", strerror(errno));
+			fprintf(stderr, BOLDRED"[!]socket not ready: %s\n"RESET,
+					strerror(errno));
 			break;
 		}
 
 		if (r == 0) {
 			r = -ETIMEDOUT;
-			fprintf(stdout, "\n[*] IHB failure detected: %s\n", strerror(ETIMEDOUT));
+			fprintf(stdout, RED"\n[*] IHB failure detected: %s\n"RESET,
+					strerror(ETIMEDOUT));
 			break;
 		}
 
@@ -459,7 +467,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 
 				p = calloc(SK_N_S, nmemb);
 				if(!p){
-					fprintf(stderr, "[!] calloc fails\n");
+					fprintf(stderr, BOLDRED"[!] calloc fails\n"RESET);
 					return -1;
 				}
 
@@ -468,7 +476,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 				ioctl(fd, SIOCGSTAMP, &end_tv);
 
 				if(nbytes != buff_l) {
-					fprintf(stdout, "[!] short rcv, ignore cunks #%d\n", z);
+					fprintf(stdout, RED"[!] short rcv, ignore cunks #%d\n"RESET, z);
 					free(p);
 				}
 
@@ -495,13 +503,13 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 
 				p = malloc(info_size);
 				if(!p){
-					fprintf(stderr, "[!] malloc fails\n");
+					fprintf(stderr, BOLDRED"[!] malloc fails\n"RESET);
 					return -1;
 				}
 
 				nbytes = read(fd, p, info_size);
 				if(nbytes != info_size) {
-					fprintf(stdout, "[!] short rcv\n");
+					fprintf(stdout, RED"[!] short rcv\n"RESET);
 					free(p);
 				}
 
@@ -532,6 +540,6 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 	} while (running);
 
 
-	puts("\n[!] Receiving data from IHB is ended.\n");
+	fprintf(stdout, "\n[!] Receiving data from IHB is ended.\n");
 	return r;
 }

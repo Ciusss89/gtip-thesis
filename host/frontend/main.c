@@ -29,15 +29,15 @@ void _signals(const int signo)
 {
 	switch (signo) {
 		case SIGTERM:
-			fprintf(stderr, "[*] received signal %i\n", signo);
+			fprintf(stdout, "[*] received signal %i\n", signo);
 			running = false;
 			break;
 		case SIGHUP:
-          		fprintf(stderr, "[*] received signal %i\n", signo);
+          		fprintf(stdout, "[*] received signal %i\n", signo);
 			running = false;
 			break;
 		case SIGINT:
-          		fprintf(stderr, "[*] received signal %i\n", signo);
+          		fprintf(stdout, "[*] received signal %i\n", signo);
 			running = false;
 			break;
 		default:
@@ -84,11 +84,11 @@ int main(int argc, char **argv)
 
 	/* validate input */
 	if (!perph) {
-		fprintf(stderr, "[!] Please specify a CAN device\n");
+		fprintf(stderr, BOLDRED"[!] Please specify a CAN device\n"RESET);
                 help(argv[0]);
 		return EXIT_FAILURE;
 	} else if (strlen(perph) > IFNAMSIZ) {
-		fprintf(stderr, "[!] name of CAN device '%s' is too long!\n", perph);
+		fprintf(stderr, BOLDRED"[!] name of CAN device '%s' is too long!\n" RESET, perph);
 		help(argv[0]);
 		return EXIT_FAILURE;
 	}
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
 				ihb_nodes, master_id);
 	} else {
-		fprintf(stderr, "[!] There are not IHBs available\n");
+		fprintf(stderr, BOLDRED"[!] There are not IHBs available\n"RESET);
 		goto _fail1;
 	}
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 				}
 
 			} else {
-				fprintf(stderr, "[!] IHB stops to send data, err=%d\n", r);
+				fprintf(stderr, BOLDRED"[!] IHB stops to send data, err=%d\n"RESET, r);
 				/* Stop if any unknown errors happen */
 				break;
 			}
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
 		if(isotp_fails) {
 			r = ihb_blacklist_node(master_id, verbose);
 			if (r < 0) {
-				fprintf(stderr, "[!] Cannot blacklist the IHB node=%#x\n", master_id);
+				fprintf(stderr, BOLDRED"[!] Cannot blacklist the IHB node=%#x\n"RESET, master_id);
 				/* Stop if any unknown errors happen */
 				break;
 			}
