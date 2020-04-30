@@ -28,6 +28,7 @@
 #ifndef SK_T_S
 #define SK_T_S (12u)
 #endif
+
 /**
  * struct skin_node - represent the collected data that is incoming by skin nodes
  *
@@ -66,6 +67,7 @@ struct skin_node {
 #ifndef ISOTP_TIMEOUT_DEF
 #define ISOTP_TIMEOUT_DEF (3u)
 #endif
+
 /**
  * struct skin_node - contains all data that are used by ihb-can driver
  *
