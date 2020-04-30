@@ -48,6 +48,7 @@ struct skin_node {
 	bool expired;
 };
 #define SK_THREAD_HELP	"ihb-skin net simulator"
+#define SK_USERSPACE_HELP "ihb-skin net simulator options"
 #endif
 
 #ifdef MODULE_IHBCAN

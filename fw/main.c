@@ -90,6 +90,9 @@ static const shell_command_t shell_commands[] = {
 #ifdef MODULE_IHBCAN
 	{ "ihbcan", IHB_THREAD_HELP, _ihb_can_handler},
 #endif
+#ifdef MODULE_IHBNETSIM
+	{ "skin", SK_USERSPACE_HELP, _skin_node_handler},
+#endif
 	{ "ihb", "ihb data info", ihb_struct_list},
 	{ NULL, NULL, NULL }
 };

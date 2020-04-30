@@ -28,7 +28,31 @@
 #endif
 
 const size_t data_bs = sizeof(struct skin_node);
+uint8_t us_fail_node = 255;
 struct skin_node *sk;
+
+static void _usage(void)
+{
+	puts("SKIN nodes simulator userspace");
+	puts("\tskin fail <node> - set as expired the node");
+}
+
+int _skin_node_handler(int argc, char **argv)
+{
+	if (argc < 2) {
+		_usage();
+		return 1;
+	} else if (strncmp(argv[1], "fail", 4) == 0) {
+		us_fail_node = strtol(argv[2], NULL, 10);
+		if(us_fail_node > SK_N_S)
+			puts("[!] input is not vaild");
+	} else {
+		printf("[!] unknown command: %s\n", argv[1]);
+		return 1;
+	}
+
+	return 0;
+}
 
 void *_skin_node_sim_thread(void *in)
 {
@@ -63,6 +87,10 @@ void *_skin_node_sim_thread(void *in)
 
 			/* Address... */
 			sk[i].address = i;
+
+			/* Force a skin node in failure state */
+			if(i == us_fail_node)
+				sk[i].expired = true;
 
 			/* Tactails... */
 			for(j = 0; j < SK_T_S; j++) {
