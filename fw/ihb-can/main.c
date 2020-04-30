@@ -38,6 +38,7 @@ static kernel_pid_t pid_notify_node;
 
 struct ihb_can_perph *can;
 struct ihb_node_info *info;
+struct ihb_structs   *ihb;
 
 /* true if runs an userspace tool */
 static bool us_overdrive = false;
@@ -245,8 +246,12 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
 		if (r > 0) {
 			can->isotp_ready = true;
+#ifdef MODULE_IHBNETSIM
+			thread_wakeup(*(ihb->pid_ihbnetsim));
+#endif
 			puts("[*] ihb: ready to send data");
 		} else {
+			can->isotp_ready = false;
 			/* !TODO: Handle this patch code */
 			ihb_isotp_close();
 		}
@@ -289,9 +294,10 @@ int _can_init(struct ihb_structs *IHB)
 	can = xmalloc(sizeof(struct ihb_can_perph));
 
 	IHB->pid_notify_node = &pid_notify_node;
-	IHB->can = can;
-
 	info = IHB->ihb_info;
+	IHB->can = can;
+	ihb = IHB;
+
 
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");
