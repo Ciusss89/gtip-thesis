@@ -426,14 +426,19 @@ static void ihb_isotp_perf(struct timeval _end_tv,
 	return;
 }
 
-static void ihb_sk_notify_fails(struct skin_node *sk_nodes, size_t sk)
+static void ihb_sk_notify_fails(struct skin_node *sk_nodes, size_t sk, bool *sk_node_expi_notified)
 {
 	uint8_t i;
 
 	for(i = 0; i < sk; i++) {
-		if(sk_nodes[i].expired)
-			fprintf(stdout, RED"Skin Node [%#x] has expired\n"RESET,
+		if(sk_nodes[i].expired && !sk_node_expi_notified[i]) {
+
+			/* Notify the failure only the first time */
+			sk_node_expi_notified[i] = true;
+
+			fprintf(stdout, RED"\nSkin Node [%#x] has expired\n"RESET,
 					sk_nodes[i].address);
+		}
 	}
 
 	return;
@@ -451,6 +456,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 
 	size_t buff_l = 0, sk_nodes_count = 0, sk_tacts = 0;
 	int r, z, nbytes;
+	bool *sk_nodes_staus = NULL;
 	bool info_received = false;
 	char *buff = NULL;
 	void *p = NULL;
@@ -507,7 +513,7 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 					if(v)
 						ihb_sk_nodes_print(sk_nodes, sk_nodes_count, sk_tacts);
 					else
-						ihb_sk_notify_fails(sk_nodes, sk_nodes_count);
+						ihb_sk_notify_fails(sk_nodes, sk_nodes_count, sk_nodes_staus);
 
 					ihb_isotp_perf(end_tv, start_tv, nbytes, &buff, perf);
 
@@ -556,12 +562,16 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 					 * from IHB
 					 */
 					info_received = true;
+
+					sk_nodes_staus = (void *)calloc(1, sk_nodes_count);
 				}
 			}
 		}
 
 	} while (running);
 
+	if (sk_nodes_staus)
+		free(sk_nodes_staus);
 
 	fprintf(stdout, "\n[!] Receiving data from IHB is ended.\n");
 	return r;
