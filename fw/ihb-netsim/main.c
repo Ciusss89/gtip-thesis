@@ -13,8 +13,8 @@
 /* RIOT APIs */
 #include "board.h"
 #include "random.h"
+#include "thread.h"
 #include "xtimer.h"
-#include "msg.h"
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -49,15 +49,26 @@ void *_skin_node_sim_thread(void *in)
 	/* Initialize */
 	random_init(13);
 
+	/*
+	 * PAY ATTENTION:
+	 * If you run this module without MODULE IHBCAN or extra delay,
+	 * this loop becomes a CPU killer. It's like
+	 * while(1) {
+	 * }
+	 */
 	while (1) {
 
+		/* Fill the struct ihb_structs with fake data */
 		for(i = 0; i < SK_N_S; i++) {
+
+			/* Address... */
 			sk[i].address = i;
 
+			/* Tactails... */
 			for(j = 0; j < SK_T_S; j++) {
 				random_bytes(&b, 1);
 				sk[i].data[j] = b;
-				}
+			}
 		}
 
 		/* Printing to stdout breaks the timings */
@@ -69,11 +80,18 @@ void *_skin_node_sim_thread(void *in)
 				puts(" ");
 			}
 		}
+
 #ifdef MODULE_IHBCAN
 		if (IHB->can->isotp_ready)
 			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
+		else
+			thread_sleep();
 #endif
-		xtimer_usleep(WAIT_20ms);
+
+		/*
+		 * You can add a delay if you needs it
+		 * xtimer_usleep(WAIT_20ms);
+		 */
 	}
 
 	return NULL;
