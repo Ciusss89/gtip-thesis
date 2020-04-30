@@ -371,10 +371,18 @@ static void ihb_sk_nodes_print(struct skin_node *sk_nodes, size_t sk, size_t tcl
 
 	puts("\n-----------------------------------DEBUG---------------------------------------");
 	for(i = 0; i < sk; i++) {
-		printf("%-3d [%#x] TS: ", i, sk_nodes[i].address);
-		for(j = 0; j < tcl; j++)
-			printf(" %02x", sk_nodes[i].data[j]);
-		printf(" Skin Node = %s\n", sk_nodes[i].expired ? "offline" : "alive");
+		fprintf(stdout, "%-3d [%#x] TS: ", i, sk_nodes[i].address);
+
+		/* Print tactile if skin node is alive  */
+		if (!sk_nodes[i].expired) {
+			for(j = 0; j < tcl; j++)
+				printf(" %02x", sk_nodes[i].data[j]);
+		} else {
+			fprintf(stdout, " -- (no data available) -- ");
+		}
+
+		fprintf(stdout, " Skin Node = %s\n", sk_nodes[i].expired ?
+				RED"offline"RESET : "alive");
 	}
 	puts("-------------------------------------------------------------------------------");
 }
@@ -414,6 +422,19 @@ static void ihb_isotp_perf(struct timeval _end_tv,
 	}
 
 	*_buff = buff;
+
+	return;
+}
+
+static void ihb_sk_notify_fails(struct skin_node *sk_nodes, size_t sk)
+{
+	uint8_t i;
+
+	for(i = 0; i < sk; i++) {
+		if(sk_nodes[i].expired)
+			fprintf(stdout, RED"Skin Node [%#x] has expired\n"RESET,
+					sk_nodes[i].address);
+	}
 
 	return;
 }
@@ -485,6 +506,8 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 
 					if(v)
 						ihb_sk_nodes_print(sk_nodes, sk_nodes_count, sk_tacts);
+					else
+						ihb_sk_notify_fails(sk_nodes, sk_nodes_count);
 
 					ihb_isotp_perf(end_tv, start_tv, nbytes, &buff, perf);
 

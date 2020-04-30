@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, _signals);
 	signal(SIGINT, _signals);
 
-	while ((c = getopt(argc, argv, "d:h:v:m")) != -1) {
+	while ((c = getopt(argc, argv, "d:hvm")) != -1) {
 		switch (c) {
 			case 'd':
 				perph = optarg;
