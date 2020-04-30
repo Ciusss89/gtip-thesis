@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	uint8_t master_id = 255, ihb_nodes = 0;
 	char *perph = NULL;
 	int c, r = 0;
-	void *data;
+	void *data = NULL;
 
 	running = true;
 

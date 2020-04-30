@@ -444,25 +444,25 @@ static void ihb_sk_notify_fails(struct skin_node *sk_nodes, size_t sk, bool *sk_
 	return;
 }
 
-int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
+int ihb_rcv_data(int fd, void **ptr, bool verbose, bool perf)
 {
 	const size_t info_size = sizeof(struct ihb_node_info);
 	static struct ihb_node_info *ihb_node = NULL;
 
-	const size_t nmemb = sizeof(struct skin_node);
+	const size_t str_sk_size = sizeof(struct skin_node);
 	static struct skin_node *sk_nodes = NULL;
 
 	struct timeval timeout_config, start_tv, end_tv;
 
 	size_t buff_l = 0, sk_nodes_count = 0, sk_tacts = 0;
-	int r, z, nbytes;
-	bool *sk_nodes_staus = NULL;
-	bool info_received = false;
+	bool ihb_info_received = false;
+	bool *sk_nodes_ex_vect = NULL;
 	char *buff = NULL;
 	void *p = NULL;
+	int r, cnt;
 	fd_set rdfs;
 
-	z = 0;
+	cnt = 0;
 
 	do {
 		/* Initial timeout for ISO TP transmissions */
@@ -490,39 +490,54 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 		if (FD_ISSET(fd, &rdfs)) {
 
 			/* IHB sends as first the info package. */
-			if (info_received) {
+			if (ihb_info_received) {
 
-				p = calloc(SK_N_S, nmemb);
+				/* Collect the data which are incoming by IHB */
+
+				p = calloc(SK_N_S, str_sk_size);
 				if(!p){
 					fprintf(stderr, BOLDRED"[!] calloc fails\n"RESET);
-					return -1;
+					r = -ENOMEM;
+					break;
 				}
 
 				ioctl(fd, SIOCGSTAMP, &start_tv);
-				nbytes = read(fd, p, buff_l);
+				r = read(fd, p, buff_l);
 				ioctl(fd, SIOCGSTAMP, &end_tv);
 
-				if(nbytes != buff_l) {
-					fprintf(stdout, RED"[!] short rcv, ignore cunks #%d\n"RESET, z);
+				if(r != buff_l) {
+					fprintf(stdout, RED"[!] short rcv, ignore cunks #%d\n"RESET, cnt);
 					free(p);
+					/*
+					 * This error is not critical, if
+					 * happens means that the received
+					 * chunk is corrupted.
+					 *
+					 * Skip it
+					 */
 				}
 
 				if (p) {
 					sk_nodes = (struct skin_node *)p;
 
-					if(v)
+					if (verbose)
 						ihb_sk_nodes_print(sk_nodes, sk_nodes_count, sk_tacts);
 					else
-						ihb_sk_notify_fails(sk_nodes, sk_nodes_count, sk_nodes_staus);
+						ihb_sk_notify_fails(sk_nodes, sk_nodes_count, sk_nodes_ex_vect);
 
-					ihb_isotp_perf(end_tv, start_tv, nbytes, &buff, perf);
+					/*
+					 * When perf is true saves into &buff
+					 * the speed stats.
+					 */
+					ihb_isotp_perf(end_tv, start_tv, r, &buff, perf);
 
+					/* Update stdout */
 					fprintf(stdout, "\r[*] IHB is sending data: chunk=%ubytes counts=%d%s",
-						nbytes,
-						z,
+						r,
+						cnt,
 						buff);
 
-					z++;
+					cnt++;
 
 					free(p);
 					free(buff);
@@ -533,13 +548,16 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 				p = malloc(info_size);
 				if(!p){
 					fprintf(stderr, BOLDRED"[!] malloc fails\n"RESET);
-					return -1;
+					r = -ENOMEM;
+					break;
 				}
 
-				nbytes = read(fd, p, info_size);
-				if(nbytes != info_size) {
+				r = read(fd, p, info_size);
+				if(r != info_size) {
 					fprintf(stdout, RED"[!] short rcv\n"RESET);
 					free(p);
+					r = -EIO;
+					break;
 				}
 
 				if (p) {
@@ -547,13 +565,31 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 
 					if (ihb_node->skin_nodes < MAX_SK_NODES)
 						sk_nodes_count = ihb_node->skin_nodes;
+					else {
+						fprintf(stderr, BOLDRED"[!] MAX_SK_NODES=%d\n"RESET,
+								MAX_SK_NODES);
+						r = -EOVERFLOW;
+						break;
+					}
 
 					if (ihb_node->skin_tactails < MAX_SK_TACTAILS)
 						sk_tacts = ihb_node->skin_tactails;
+					else {
+						fprintf(stderr, BOLDRED"[!] MAX_SK_TACTAILS=%d\n"RESET,
+								MAX_SK_TACTAILS);
+						r = -EOVERFLOW;
+						break;
+					}
 
+					/* Receive the iso-tp timeout from IHB */
 					timeout_config.tv_sec = ihb_node->isotp_timeo;
 
-					buff_l = nmemb * sk_nodes_count;
+					/*
+					 * The buff_l will be equal to the size
+					 * of the chunk sent by IHB
+					 */
+					buff_l = str_sk_size * sk_nodes_count;
+
 					ihb_info_print(ihb_node);
 					free(p);
 
@@ -561,17 +597,26 @@ int ihb_rcv_data(int fd, void **ptr, bool v, bool perf)
 					 * Switch to collect the incoming data
 					 * from IHB
 					 */
-					info_received = true;
+					ihb_info_received = true;
 
-					sk_nodes_staus = (void *)calloc(1, sk_nodes_count);
+					/*
+					 * Build an array of bool which is used
+					 * to track the SKIN nodes that have
+					 * passed away.
+					 */
+					sk_nodes_ex_vect = (void *)malloc(sk_nodes_count);
+					if (!sk_nodes_ex_vect){
+						fprintf(stderr, BOLDRED"[!] malloc fails\n"RESET);
+						r = -ENOMEM;
+						break;
+					}
 				}
 			}
 		}
-
 	} while (running);
 
-	if (sk_nodes_staus)
-		free(sk_nodes_staus);
+	if (sk_nodes_ex_vect)
+		free(sk_nodes_ex_vect);
 
 	fprintf(stdout, "\n[!] Receiving data from IHB is ended.\n");
 	return r;
