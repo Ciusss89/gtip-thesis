@@ -114,6 +114,12 @@ void *_skin_node_sim_thread(void *in)
 			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 		else
 			thread_sleep();
+#else
+		/*
+		 * If the MODULE_IHBCAN is not present this thread needs a
+		 * delay otherwise it becomes a CPU killer.
+		 */
+		xtimer_usleep(WAIT_1000ms);
 #endif
 
 		/*
