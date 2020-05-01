@@ -395,9 +395,15 @@ static void ihb_isotp_perf(struct timeval _end_tv,
 {
 	struct timeval diff_tv;
 	char *buff = NULL;
+	int r;
 
 	if(!perf) {
-		asprintf(&buff, " ");
+		r = asprintf(&buff, " ");
+		if (r < 0) {
+			fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
+			return;
+		}
+
 		*_buff = buff;
 		return;
 	}
@@ -414,11 +420,19 @@ static void ihb_isotp_perf(struct timeval _end_tv,
 		diff_tv.tv_sec = diff_tv.tv_usec = 0;
 
 	if (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000){
-		asprintf(&buff, " time %ld.%06lds, => %lu byte/s ", diff_tv.tv_sec, diff_tv.tv_usec,
-				(bytes * 1000) /
-				(diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
+		r = asprintf(&buff, " time %ld.%06lds, => %lu byte/s ", diff_tv.tv_sec, diff_tv.tv_usec,
+				    (bytes * 1000) /
+				    (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
+		if (r < 0) {
+			fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
+			return;
+		}
 	} else {
-		asprintf(&buff, "(no time available)");
+		r = asprintf(&buff, "(no time available)");
+		if (r < 0) {
+			fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
+			return;
+		}
 	}
 
 	*_buff = buff;
