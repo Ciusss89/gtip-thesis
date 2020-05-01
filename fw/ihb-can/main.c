@@ -250,6 +250,9 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		xtimer_usleep (WAIT_500ms);
 		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
 		if (r > 0) {
+			/* Destrory ihb info */
+			free(info);
+
 			can->isotp_ready = true;
 			thread_wakeup(pid_of_data_source);
 			puts("[*] ihb: ready to send data");
@@ -258,6 +261,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 			/* !TODO: Handle this patch code */
 			ihb_isotp_close();
 		}
+
 	}
 
 	return NULL;
@@ -329,6 +333,8 @@ void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 
 	strncpy(info->mcu_uid, can->controller_uid, strlen(can->controller_uid));
 	info->mcu_uid[strlen(can->controller_uid)] = '\0';
+
+	info->isotp_timeo = ISOTP_TIMEOUT_DEF;
 
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID

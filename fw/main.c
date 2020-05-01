@@ -98,20 +98,10 @@ static const shell_command_t shell_commands[] = {
 };
 static char line_buf[SHELL_DEFAULT_BUFSIZE];
 
-/**
- * @ihb_init: start the ihb routine
- *
- * Return 0 if all is well, a negative number otherwise.
- */
-static int ihb_init(void)
+static void ihb_info_init(void)
 {
-	kernel_pid_t pid_data_gen = -1;
-
-	memset(&IHB, 0, sizeof(struct ihb_structs));
 	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
-#ifdef MODULE_IHBCAN
-	IHB.ihb_info->isotp_timeo = ISOTP_TIMEOUT_DEF;
-#endif
+
 	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU) + 1);
 	IHB.ihb_info->mcu_arch[strlen(RIOT_MCU)] = '\0';
 
@@ -123,6 +113,20 @@ static int ihb_init(void)
 
 	strncpy(IHB.ihb_info->ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER) + 1);
 	IHB.ihb_info->ihb_fw_rev[strlen(IHB_FW_VER)] = '\0';
+}
+
+/**
+ * @ihb_init: start the ihb routine
+ *
+ * Return 0 if all is well, a negative number otherwise.
+ */
+static int ihb_init(void)
+{
+	kernel_pid_t pid_data_gen = -1;
+
+	memset(&IHB, 0, sizeof(struct ihb_structs));
+
+	ihb_info_init();
 
 #ifdef MODULE_UPTIME
 	puts("[*] MODULE_UPTIME");
