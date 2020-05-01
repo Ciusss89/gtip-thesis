@@ -6,8 +6,8 @@
 #include "ihb.h"
 
 /* ihb-can/main.c */
-int _can_init(struct ihb_structs *IHB);
-int _ihb_can_handler(int argc, char **argv);
+int ihb_can_handler(int argc, char **argv);
+void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source);
 
 /* ihb-can/sender.c */
 int ihb_isotp_close(void);

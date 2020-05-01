@@ -154,9 +154,24 @@ static int ihb_init(void)
 
 #ifdef MODULE_IHBCAN
 	IHB.can = NULL;
+	IHB.pid_notify_node = NULL;
 	puts("[*] MODULE_IHBCAN");
-	return _can_init(&IHB);
+
+	/*
+	 * To work IHBCAN needs the data which must be sent to host by isotp,
+	 * pid_data_gen consists in the thread which will be turn on by this
+	 * module to acquire the data to send.
+	 */
+	if(pid_data_gen < KERNEL_PID_UNDEF)
+		return -1;
+
+	ihb_can_init(&IHB, pid_data_gen);
+	if(!IHB.can || !IHB.pid_notify_node)
+		return -1;
 #endif
+
+	/* Silent the gcc warning */
+	(void) pid_data_gen;
 
 	return 0;
 }

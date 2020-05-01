@@ -36,9 +36,14 @@
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
 
+/*
+ * PID of the process that generate the data which have to sent by isotp
+ * transmission.
+ */
+static kernel_pid_t pid_of_data_source;
+
 struct ihb_can_perph *can;
 struct ihb_node_info *info;
-struct ihb_structs   *ihb;
 
 /* true if runs an userspace tool */
 static bool us_overdrive = false;
@@ -246,9 +251,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
 		if (r > 0) {
 			can->isotp_ready = true;
-#ifdef MODULE_IHBNETSIM
-			thread_wakeup(*(ihb->pid_ihbnetsim));
-#endif
+			thread_wakeup(pid_of_data_source);
 			puts("[*] ihb: ready to send data");
 		} else {
 			can->isotp_ready = false;
@@ -260,7 +263,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
-int _ihb_can_handler(int argc, char **argv)
+int ihb_can_handler(int argc, char **argv)
 {
 	if (argc < 2) {
 		_usage();
@@ -285,7 +288,7 @@ int _ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-int _can_init(struct ihb_structs *IHB)
+void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 {
 	uint8_t unique_id[CPUID_LEN];
 	uint8_t r = 1;
@@ -293,11 +296,7 @@ int _can_init(struct ihb_structs *IHB)
 
 	can = xmalloc(sizeof(struct ihb_can_perph));
 
-	IHB->pid_notify_node = &pid_notify_node;
 	info = IHB->ihb_info;
-	IHB->can = can;
-	ihb = IHB;
-
 
 	if(CAN_DLL_NUMOF == 0)
 		puts("[!] no CAN controller avaible");
@@ -306,7 +305,7 @@ int _can_init(struct ihb_structs *IHB)
 
 	if(CPUID_LEN > MAX_CPUID_LEN) {
 		puts("[!] CPUID_LEN > MAX_CPUID_LEN");
-		return 1;
+		return;
 	}
 
 	can->master = false;
@@ -342,20 +341,26 @@ int _can_init(struct ihb_structs *IHB)
 	if(r != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
-		return 1;
+		return;
 	}
 
 	pid_notify_node = thread_create(notify_node_stack,
 					sizeof(notify_node_stack),
-					THREAD_PRIORITY_MAIN - 1,
+					THREAD_PRIORITY_MAIN - 2,
 					THREAD_CREATE_WOUT_YIELD,
 					_thread_notify_node, NULL,
 					"ihb notify node");
 	if(pid_notify_node < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread notify node");
-		return 1;
+		return;
 	}
 
-	puts("[*] IHB: init of the CAN subumodule success");
-	return 0;
+	/* Make visible the CAN' stuff where we need */
+	IHB->pid_notify_node = &pid_notify_node;
+	IHB->can = can;
+
+	/* Save the PID which generates the data which have to sent */
+	pid_of_data_source = _data_source;
+
+	DEBUG("[*] IHB: init CAN subumodule success");
 }
