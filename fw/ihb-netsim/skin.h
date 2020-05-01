@@ -1,9 +1,9 @@
 #ifndef CAN_NETSIM_H
 #define CAN_NETSIM_H
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-void *_skin_node_sim_thread(void *in);
-int _skin_node_handler(int argc, char **argv);
+int skin_node_handler(int argc, char **argv);
+void *skin_node_sim_thread(void *in);
 #endif

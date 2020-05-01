@@ -37,7 +37,7 @@ static void _usage(void)
 	puts("\tskin fail <node> - set as expired the node");
 }
 
-int _skin_node_handler(int argc, char **argv)
+int skin_node_handler(int argc, char **argv)
 {
 	if (argc < 2) {
 		_usage();
@@ -54,7 +54,7 @@ int _skin_node_handler(int argc, char **argv)
 	return 0;
 }
 
-void *_skin_node_sim_thread(void *in)
+void *skin_node_sim_thread(void *in)
 {
 	struct ihb_structs *IHB = (struct ihb_structs *)in;
 	struct ihb_node_info *info = IHB->ihb_info;
@@ -67,8 +67,8 @@ void *_skin_node_sim_thread(void *in)
 
 	uint8_t i, j, b;
 
-	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n", SK_N_S,
-								      	  SK_T_S);
+	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n",
+		SK_N_S, SK_T_S);
 
 	/* Initialize */
 	random_init(13);

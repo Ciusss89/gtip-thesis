@@ -88,10 +88,10 @@ static const shell_command_t shell_commands[] = {
 	{ "uptime", UPTIME_THREAD_HELP, _uptime_handler},
 #endif
 #ifdef MODULE_IHBCAN
-	{ "ihbcan", IHB_THREAD_HELP, _ihb_can_handler},
+	{ "ihbcan", IHB_THREAD_HELP, ihb_can_handler},
 #endif
 #ifdef MODULE_IHBNETSIM
-	{ "skin", SK_USERSPACE_HELP, _skin_node_handler},
+	{ "skin", SK_USERSPACE_HELP, skin_node_handler},
 #endif
 	{ "ihb", "ihb data info", ihb_struct_list},
 	{ NULL, NULL, NULL }
@@ -105,6 +105,8 @@ static char line_buf[SHELL_DEFAULT_BUFSIZE];
  */
 static int ihb_init(void)
 {
+	kernel_pid_t pid_data_gen = -1;
+
 	memset(&IHB, 0, sizeof(struct ihb_structs));
 	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
 #ifdef MODULE_IHBCAN
@@ -129,18 +131,25 @@ static int ihb_init(void)
 
 #ifdef MODULE_IHBNETSIM
 	IHB.sk_nodes = NULL;
+	IHB.pid_ihbnetsim = NULL;
 	puts("[*] MODULE_IHBNETSIM");
-	kernel_pid_t pid_ihbnetsim = thread_create(skin_sim_stack,
-					  sizeof(skin_sim_stack),
-					  THREAD_PRIORITY_MAIN - 2,
-					  THREAD_CREATE_WOUT_YIELD,
-					  _skin_node_sim_thread,
-					  (void *)&IHB, SK_THREAD_HELP);
 
-	if(pid_ihbnetsim < KERNEL_PID_UNDEF)
-		puts("[!] cannot start the skin simulator thread");
+	pid_data_gen = thread_create(skin_sim_stack,
+			             sizeof(skin_sim_stack),
+				     THREAD_PRIORITY_MAIN - 1,
+				     THREAD_CREATE_SLEEPING,
+				     skin_node_sim_thread,
+				     (void *)&IHB, SK_THREAD_HELP);
+	if(pid_data_gen < KERNEL_PID_UNDEF) {
+		puts("[!] cannot start netskin thread");
+		return -1;
+	}
 
-	IHB.pid_ihbnetsim = &pid_ihbnetsim;
+	IHB.pid_ihbnetsim = &pid_data_gen;
+	/* Force thread to start immediately */
+	thread_wakeup(pid_data_gen);
+	if (!IHB.pid_ihbnetsim || !IHB.sk_nodes)
+		return -1;
 #endif
 
 #ifdef MODULE_IHBCAN
