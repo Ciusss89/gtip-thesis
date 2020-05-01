@@ -110,10 +110,15 @@ void *skin_node_sim_thread(void *in)
 		}
 
 #ifdef MODULE_IHBCAN
-		if (IHB->can->isotp_ready)
-			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
-		else
+		/* To check the isotp_ready flag the struct CAN must be valid */
+		if (IHB->can) {
+			if(IHB->can->isotp_ready)
+				ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
+			else
+				thread_sleep();
+		} else {
 			thread_sleep();
+		}
 #else
 		/*
 		 * If the MODULE_IHBCAN is not present this thread needs a
