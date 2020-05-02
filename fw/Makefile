@@ -26,6 +26,14 @@ CFLAGS += -DSK_T_S=12
 #
 CFLAGS += -DISOTP_TIMEOUT_DEF=2
 
+## IHBCAN: Set the tx port for ISO TP transmissions
+#
+CFLAGS += -DISOTP_TX_PORT=0x700
+
+## IHBCAN: Set the rx port ISO TP transmissions
+#
+CFLAGS += -DISOTP_RX_PORT=0x708
+
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
