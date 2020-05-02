@@ -25,6 +25,7 @@
 
 #ifdef MODULE_IHBCAN
 #include "ihb-can/can.h"
+static struct ihb_can_ctx *can = NULL;
 #endif
 
 const size_t data_bs = sizeof(struct skin_node);
@@ -110,9 +111,10 @@ void *skin_node_sim_thread(void *in)
 		}
 
 #ifdef MODULE_IHBCAN
+		can = IHB->can;
 		/* To check the isotp_ready flag the struct CAN must be valid */
-		if (IHB->can) {
-			if(IHB->can->isotp_ready)
+		if (can) {
+			if(can->can_isotp_ready)
 				ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 			else
 				thread_sleep();

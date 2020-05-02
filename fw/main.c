@@ -37,31 +37,20 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 static struct ihb_structs IHB;
 
-int ihb_struct_list(__attribute__((unused)) int argc, __attribute__((unused)) char **argv)
+static int ihb_struct_list(__attribute__((unused)) int argc,
+			   __attribute__((unused)) char **argv)
 {
 	puts("[*] IHB info");
 
 #ifdef MODULE_IHBCAN
-	const struct ihb_can_perph *can = IHB.can;
 	if(IHB.can) {
-		printf("- CAN: struct ihb_can_perph address=%p, size=%ubytes",
-			(void *)IHB.can,
-			sizeof(struct ihb_can_perph));
-
-		printf("\n\tdev=%d\n\tname=%s\n\tmcu_id=%s\n\tframe_id=%#x\n\trole=%s\n\tnotify=%s\n",
-			can->id,
-			can->name,
-			can->controller_uid,
-			can->frame_id,
-			can->master ? "master" : "idle",
-			can->status_notify_node ? "is running" : "no");
-
+		ihb_can_module_info(IHB.can);
 		printf("- PIDs:\n\tnotify=%d\n", *IHB.pid_notify_node);
-
 	} else {
-		puts("[!] BUG: struct can never should be null");
+		puts("[!] BUG: struct ihb_can_ctx never should be null");
 	}
 #endif
+
 #ifdef MODULE_IHBNETSIM
 	if(IHB.sk_nodes) {
 		printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
@@ -88,7 +77,7 @@ static const shell_command_t shell_commands[] = {
 	{ "uptime", UPTIME_THREAD_HELP, _uptime_handler},
 #endif
 #ifdef MODULE_IHBCAN
-	{ "ihbcan", IHB_THREAD_HELP, ihb_can_handler},
+	{ "ihbcan", IHB_USERSPACE_HELP, ihb_can_handler},
 #endif
 #ifdef MODULE_IHBNETSIM
 	{ "skin", SK_USERSPACE_HELP, skin_node_handler},

@@ -51,48 +51,6 @@ struct skin_node {
 #define SK_USERSPACE_HELP "ihb-skin net simulator options"
 #endif
 
-#ifdef MODULE_IHBCAN
-
-/* Maximum length of CAN name */
-#define CAN_NAME_LEN (16 + 1)
-
-#define MAX_CPUID_LEN (16)
-
-/*
- * MCU can have one or more CAN controllers, by default I use the
- * CAN controlller 0
- */
-#define CAN_C (0)
-
-/* timeout for ISO TP transmissions */
-#ifndef ISOTP_TIMEOUT_DEF
-#define ISOTP_TIMEOUT_DEF (3u)
-#endif
-
-/**
- * struct skin_node - contains all data that are used by ihb-can driver
- *
- * @controller_uid: MCU's unique ID
- * @name: the name of the can controller
- * @id: identifier number of the MCU's can controller
- * @frame_id: CAN frame ID, it's obtainded by the MCU unique ID
- * @status_notify_node: if true the IHB node is announcing itself on CAN bus
- * @isotp_ready: true when the IHB can send the isotp chunks to host
- * @master: true when the IHB node is master, false otherwise.
- */
-struct ihb_can_perph {
-	char controller_uid[MAX_CPUID_LEN * 2 + 1];
-	char name[CAN_NAME_LEN];
-	uint8_t id;
-	uint8_t frame_id;
-	bool status_notify_node;
-	bool isotp_ready;
-	bool master;
-};
-
-#define IHB_THREAD_HELP "ihb-can driver"
-#endif
-
 #define MAX_INFO_LENGHT (31)
 /**
  * struct ihb_structs - it's a containter of pointers
@@ -100,10 +58,8 @@ struct ihb_can_perph {
  * The modules must be independent on one each other
  */
 struct ihb_structs {
-#ifdef MODULE_IHBCAN
-	struct ihb_can_perph *can;
+	void *can;
 	kernel_pid_t *pid_notify_node;
-#endif
 #ifdef MODULE_IHBNETSIM
 	struct skin_node *sk_nodes;
 	kernel_pid_t *pid_ihbnetsim;

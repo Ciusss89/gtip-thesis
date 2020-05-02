@@ -42,8 +42,8 @@ static kernel_pid_t pid_notify_node;
  */
 static kernel_pid_t pid_of_data_source;
 
-struct ihb_can_perph *can;
-struct ihb_node_info *info;
+static struct ihb_node_info *info = NULL;
+static struct ihb_can_ctx *can = NULL;
 
 /* true if runs an userspace tool */
 static bool us_overdrive = false;
@@ -56,14 +56,14 @@ static void _usage(void)
 	puts("\tihbcan notifyOFF - teardown pid_notify_node");
 }
 
-static int  _scan_for_controller(struct ihb_can_perph *device)
+static int  _scan_for_controller(struct ihb_can_ctx *device)
 {
 	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
 
 	if (raw_can && strlen(raw_can) < CAN_NAME_LEN) {
-		device->id = CAN_C;
-		strcpy(device->name, raw_can);
-		DEBUG("[#] CAN controller=%d, name=%s\n", device->id, device->name);
+		device->can_perh_id = CAN_C;
+		strcpy(device->can_drv_name, raw_can);
+		DEBUG("[#] CAN controller=%d, name=%s\n", device->can_perh_id, device->can_drv_name);
 		return 0;
 	}
 
@@ -116,7 +116,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	conn_can_raw_t conn;
 	int r;
 
-	r = conn_can_raw_create(&conn, NULL, 0, can->id, 0);
+	r = conn_can_raw_create(&conn, NULL, 0, can->can_perh_id, 0);
 	if (r < 0) {
 		printf("[!] cannot create the CAN socket: err=%d\n", r);
 		return NULL;
@@ -129,7 +129,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	 * - IHB's MAGIC: ASCII "_IHB..V_"
 	 * - TODO! Pass the magic as configurable paramiter from the Makefile
 	 */
-	snd_frame->can_id = can->frame_id;
+	snd_frame->can_id = can->can_frame_id;
 	snd_frame->can_dlc = 8;
 	snd_frame->data[0] = 0x5F;
 	snd_frame->data[1] = 0x49;
@@ -143,7 +143,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	/*
 	 * Setup the filter for rcv socket
 	 */
-	filter->can_id = can->frame_id;
+	filter->can_id = can->can_frame_id;
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	do {
@@ -244,20 +244,22 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	if(can->master && !us_overdrive) {
 		/* Open the iso-tp socket */
 		xtimer_usleep(WAIT_100ms);
-		ihb_isotp_init(can->id, ISOTP_TIMEOUT_DEF, &(can->isotp_ready));
+		ihb_isotp_init(can->can_perh_id,
+			       ISOTP_TIMEOUT_DEF,
+			       &(can->can_isotp_ready));
 
 		/* Send the ihb-info as first chunks */
-		xtimer_usleep (WAIT_500ms);
+		xtimer_usleep(WAIT_500ms);
 		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
 		if (r > 0) {
 			/* Destrory ihb info */
 			free(info);
 
-			can->isotp_ready = true;
+			can->can_isotp_ready = true;
 			thread_wakeup(pid_of_data_source);
 			puts("[*] ihb: ready to send data");
 		} else {
-			can->isotp_ready = false;
+			can->can_isotp_ready = false;
 			/* !TODO: Handle this patch code */
 			ihb_isotp_close();
 		}
@@ -267,15 +269,32 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
+void ihb_can_module_info(struct ihb_can_ctx *can)
+{
+	printf("- CAN: struct ihb_can_ctx address=%p, size=%ubytes",
+		(void *)can,
+		sizeof(struct ihb_can_ctx));
+
+	printf("\n\tCAN controller num=%d\n\tCAN driver name=%s\n\tMCU id=%s\n\tCAN frame id=%#x\n\trole=%s\n\tnotify=%s\n",
+		can->can_perh_id,
+		can->can_drv_name,
+		can->mcu_controller_uid,
+		can->can_frame_id,
+		can->master ? "master" : "idle",
+		can->status_notify_node ? "is running" : "no");
+
+	return;
+}
+
 int ihb_can_handler(int argc, char **argv)
 {
 	if (argc < 2) {
 		_usage();
 		return 1;
 	} else if (strncmp(argv[1], "canON", 6) == 0) {
-		return _power_up(can->id);
+		return _power_up(can->can_perh_id);
 	} else if (strncmp(argv[1], "canOFF", 7) == 0) {
-		return _power_down(can->id);
+		return _power_down(can->can_perh_id);
 	} else if (strncmp(argv[1], "notifyOFF", 10) == 0) {
 		if(can->status_notify_node) {
 			us_overdrive = true;
@@ -298,7 +317,7 @@ void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 	uint8_t r = 1;
 	char *b;
 
-	can = xmalloc(sizeof(struct ihb_can_perph));
+	can = xmalloc(sizeof(struct ihb_can_ctx));
 
 	info = IHB->ihb_info;
 
@@ -307,13 +326,13 @@ void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 	else
 		DEBUG("[#] MCU has %d can controller\n", CAN_DLL_NUMOF);
 
-	if(CPUID_LEN > MAX_CPUID_LEN) {
+	if(CPUID_LEN > MAX_MCU_ID_LEN) {
 		puts("[!] CPUID_LEN > MAX_CPUID_LEN");
 		return;
 	}
 
 	can->master = false;
-	can->isotp_ready = false;
+	can->can_isotp_ready = false;
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -328,11 +347,11 @@ void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 	b = data2str(unique_id, CPUID_LEN);
 	
 	/* Save the MCU unique ID */
-	strcpy(can->controller_uid, b);
+	strcpy(can->mcu_controller_uid, b);
 	free(b);
 
-	strncpy(info->mcu_uid, can->controller_uid, strlen(can->controller_uid));
-	info->mcu_uid[strlen(can->controller_uid)] = '\0';
+	strncpy(info->mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
+	info->mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
 
 	info->isotp_timeo = ISOTP_TIMEOUT_DEF;
 
@@ -340,8 +359,8 @@ void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
 	 * Generate an Unique CAN ID from the MCU's unique ID
 	 * the fletcher8 hash function returns a not null value
 	 */
-	can->frame_id = fletcher8(unique_id, CPUID_LEN);
-	DEBUG("[*] CAN ID=%d\n", can->frame_id);
+	can->can_frame_id = fletcher8(unique_id, MAX_MCU_ID_LEN);
+	DEBUG("[*] CAN ID=%d\n", can->can_frame_id);
 
 	r = _scan_for_controller(can);
 	if(r != 0) {
