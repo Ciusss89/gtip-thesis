@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../ihb.h"
-
 #define IHB_USERSPACE_HELP "ihb-can userspace tool"
 #define IHB_THREAD_HELP "ihb-can driver"
 
@@ -69,12 +67,12 @@ int ihb_can_handler(int argc, char **argv);
 /*
  * @ihb_can_init: inizialize the CAN module.
  *
- * @IHB: pointer of struct ihb_structs
+ * @ctx: pointer of struct ihb_ctx
  * @_data_source: pid of process which generates payload
  *
- * In case of success it adds the ihb_can_ctx struct pointer to ihb_structs.
+ * In case of success it adds the ihb_can_ctx struct pointer to ihb_ctx.
  */
-void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source);
+void ihb_can_init(void *ctx, kernel_pid_t _data_source);
 
 /* ihb-can/sender.c */
 

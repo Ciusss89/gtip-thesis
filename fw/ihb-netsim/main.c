@@ -64,7 +64,7 @@ int skin_node_handler(int argc, char **argv)
 
 void *skin_node_sim_thread(void *in)
 {
-	struct ihb_structs *IHB = (struct ihb_structs *)in;
+	struct ihb_ctx *IHB = (struct ihb_ctx *)in;
 	struct ihb_node_info *info = IHB->ihb_info;
 	sk = xcalloc(SK_N_S, data_bs);
 

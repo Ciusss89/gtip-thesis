@@ -311,8 +311,9 @@ int ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-void ihb_can_init(struct ihb_structs *IHB, kernel_pid_t _data_source)
+void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 {
+	struct ihb_ctx *IHB = ctx;
 	uint8_t unique_id[CPUID_LEN];
 	uint8_t r = 1;
 	char *b;

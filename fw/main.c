@@ -35,7 +35,7 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 #include "ihb.h"
 
-static struct ihb_structs IHB;
+static struct ihb_ctx IHB;
 
 static int ihb_struct_list(__attribute__((unused)) int argc,
 			   __attribute__((unused)) char **argv)
@@ -55,12 +55,10 @@ static int ihb_struct_list(__attribute__((unused)) int argc,
 	if(IHB.sk_nodes) {
 		ihb_skin_module_info(IHB.sk_nodes);
 		printf("- PIDs:\n\tNetSkinSimulator=%d\n", *IHB.pid_ihbnetsim);
-
 	} else {
 		puts("[!] BUG: struct sk_nodes never should be null");
 	}
 #endif
-
 	return 0;
 }
 
@@ -106,7 +104,7 @@ static int ihb_init(void)
 {
 	kernel_pid_t pid_data_gen = -1;
 
-	memset(&IHB, 0, sizeof(struct ihb_structs));
+	memset(&IHB, 0, sizeof(struct ihb_ctx));
 
 	ihb_info_init();
 

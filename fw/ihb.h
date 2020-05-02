@@ -16,12 +16,17 @@
 #define WAIT_5ms	(5LU * US_PER_MS)       /* delay of 005ms */
 
 #define MAX_INFO_LENGHT (31)
+
 /**
- * struct ihb_structs - it's a containter of pointers
+ * struct ihb_ctx - it's a containter of ihb data, info and other stuff.
  *
- * The modules must be independent on one each other
+ * @can: pointer of struc ihb_can_ctx
+ * @sk_nodes: pointer of struct skin_node
+ * @pid_ihbnetsim: pointer of skin_node_sim_thread pid
+ * @pid_otify_node: pointer of can notify thread pid
+ * @ihb_info: pointer of struc ihb_node_info
  */
-struct ihb_structs {
+struct ihb_ctx {
 	void *can;
 	void *sk_nodes;
 	kernel_pid_t *pid_ihbnetsim;
@@ -31,6 +36,7 @@ struct ihb_structs {
 
 /**
  * struct ihb_node_info - contains the info of IHB node which are sent to HOST
+ *
  * @mcu_uid: MCU's unique ID
  * @mcu_arch: MCU's architecture
  * @mcu_board: IHB board name
@@ -53,5 +59,4 @@ struct ihb_node_info {
 
 	uint8_t isotp_timeo;
 };
-
 #endif
