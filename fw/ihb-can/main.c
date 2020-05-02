@@ -244,7 +244,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	if(can->master && !us_overdrive) {
 		/* Open the iso-tp socket */
 		xtimer_usleep(WAIT_100ms);
-		ihb_isotp_init(can->id);
+		ihb_isotp_init(can->id, ISOTP_TIMEOUT_DEF, &(can->isotp_ready));
 
 		/* Send the ihb-info as first chunks */
 		xtimer_usleep (WAIT_500ms);
