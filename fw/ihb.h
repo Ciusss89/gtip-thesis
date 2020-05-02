@@ -15,42 +15,6 @@
 #define WAIT_10ms	(10LU * US_PER_MS)	/* delay of 010ms */
 #define WAIT_5ms	(5LU * US_PER_MS)       /* delay of 005ms */
 
-#ifdef MODULE_IHBNETSIM
-#define MAX_SK_NODES (256u)
-#define MAX_SK_TACTAILS (16u)
-
-/* SK_N_S: Skin nodes for IHB */
-#ifndef SK_N_S
-#define SK_N_S (8u)
-#endif
-
-/* SK_T_S: Skin Tactile sensors per skin node */
-#ifndef SK_T_S
-#define SK_T_S (12u)
-#endif
-
-/**
- * struct skin_node - represent the collected data that is incoming by skin nodes
- *
- * The Struct is filled by ihb-netsim driver
- *
- * @data: payload, the output of the tactile sensors
- * @address: node's address
- * @expired: Each time that the IHB acquires payload from SKIN node, that means
- *           that the node is still alive so expired is not set.
- *           Netsim set is always false.
- *
- * Struct size dipends by SK_T_S, if SK_T_S == 12, struct is 16bytes.
- */
-struct skin_node {
-	uint8_t data[SK_T_S];
-	uint16_t address;
-	bool expired;
-};
-#define SK_THREAD_HELP	"ihb-skin net simulator"
-#define SK_USERSPACE_HELP "ihb-skin net simulator options"
-#endif
-
 #define MAX_INFO_LENGHT (31)
 /**
  * struct ihb_structs - it's a containter of pointers
@@ -59,11 +23,9 @@ struct skin_node {
  */
 struct ihb_structs {
 	void *can;
-	kernel_pid_t *pid_notify_node;
-#ifdef MODULE_IHBNETSIM
-	struct skin_node *sk_nodes;
+	void *sk_nodes;
 	kernel_pid_t *pid_ihbnetsim;
-#endif
+	kernel_pid_t *pid_notify_node;
 	struct ihb_node_info *ihb_info;
 };
 

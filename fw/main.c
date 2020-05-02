@@ -53,14 +53,7 @@ static int ihb_struct_list(__attribute__((unused)) int argc,
 
 #ifdef MODULE_IHBNETSIM
 	if(IHB.sk_nodes) {
-		printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
-			(void *)IHB.sk_nodes,
-			sizeof(struct skin_node));
-
-		printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
-			SK_T_S,
-			SK_N_S);
-
+		ihb_skin_module_info(IHB.sk_nodes);
 		printf("- PIDs:\n\tNetSkinSimulator=%d\n", *IHB.pid_ihbnetsim);
 
 	} else {

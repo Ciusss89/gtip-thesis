@@ -29,8 +29,8 @@ static struct ihb_can_ctx *can = NULL;
 #endif
 
 const size_t data_bs = sizeof(struct skin_node);
+static struct skin_node *sk = NULL;
 uint8_t us_fail_node = 255;
-struct skin_node *sk;
 
 static void _usage(void)
 {
@@ -42,14 +42,21 @@ int skin_node_handler(int argc, char **argv)
 {
 	if (argc < 2) {
 		_usage();
-		return 1;
+		return -1;
 	} else if (strncmp(argv[1], "fail", 4) == 0) {
-		us_fail_node = strtol(argv[2], NULL, 10);
-		if(us_fail_node > SK_N_S)
+		if (!argv[2]) {
 			puts("[!] input is not vaild");
+			return -1;
+		}
+		us_fail_node = strtol(argv[2], NULL, 10);
+		if(us_fail_node > SK_N_S) {
+			puts("[!] input is not vaild");
+			return -1;
+		}
+		return 0;
 	} else {
 		printf("[!] unknown command: %s\n", argv[1]);
-		return 1;
+		return -1;
 	}
 
 	return 0;
@@ -136,4 +143,15 @@ void *skin_node_sim_thread(void *in)
 	}
 
 	return NULL;
+}
+
+void ihb_skin_module_info(struct  skin_node *ctx)
+{
+	printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
+			(void *)ctx,
+			sizeof(struct skin_node));
+
+	printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
+		SK_T_S,
+		SK_N_S);
 }
