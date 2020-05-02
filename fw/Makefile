@@ -10,23 +10,21 @@ BOARD ?= nucleo-l476rg
 #
 RIOTBASE ?= $(CURDIR)/../../RIOT/
 
-## Firmware version
+## Firmware version: <tag-name>-<last-commit-of-tag>-<date>
 #
-CFLAGS += -DIHB_FW_VER=\"3.0.0.rc1-$(shell date --iso=date)\"
+CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tags)-$(shell date --iso=date)\"
 
-## Skin nodes for IHB
+## IHBNETSIM: Skin nodes for IHB. Set the network size, max size 256.
 #
 CFLAGS += -DSK_N_S=16
 
-## Tactile sensors per skin node
+## IHBNETSIM: Tactile sensors per Skin node, max size 12.
 #
 CFLAGS += -DSK_T_S=12
 
-## Timeout for ISO TP transmissions
+## IHBCAN: Set the timeout for ISO TP transmissions
 #
 CFLAGS += -DISOTP_TIMEOUT_DEF=2
-
-#CFLAGS += -DDEVELHELP
 
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
