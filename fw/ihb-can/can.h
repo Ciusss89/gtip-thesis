@@ -21,6 +21,30 @@
 #define ISOTP_TIMEOUT_DEF (3u)
 #endif
 
+typedef enum {
+	IDLE = 0x0,
+	NOTIFY,
+	BACKUP,
+	ACTIVE,
+	TOFIX,
+	ERR
+} fsm_state_t;
+
+typedef enum {
+	WAKEUP = 0x0,
+	MASTER,
+	SLAVE,
+	RUNT_FIX,
+	FIXED,
+	FAIL
+} fsm_event_t;
+
+typedef struct state_transition_table {
+	fsm_state_t state;
+	fsm_event_t trans;
+	fsm_state_t nextstate;
+} fsm_table_t;
+
 /**
  * struc ihb_can_ctx - ihb can context struct contains data which are used by
  * 		       can submodule.
@@ -43,7 +67,7 @@ struct ihb_can_ctx {
 	bool master;
 };
 
-/* ihb-can/main.c */
+/* FILE: ihb-can/main.c */
 
 /*
  * @ihb_can_module_info: print ihb_can_ctx struct contens
@@ -74,7 +98,7 @@ int ihb_can_handler(int argc, char **argv);
  */
 void ihb_can_init(void *ctx, kernel_pid_t _data_source);
 
-/* ihb-can/sender.c */
+/* FILE: ihb-can/sender.c */
 
 /*
  * @ihb_isotp_close: close the isotp connnection and sets can_isotp_ready to
@@ -108,4 +132,33 @@ int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready);
  */
 int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t count);
 
+/* FILE: ihb-can/fsm.c */
+
+/*
+ * @state_init: initialize the finite state machine to IDLE
+ */
+void state_init(void);
+
+/*
+ * @state_event: skip towards next state in relation to current state and event
+ *
+ * @evnt: event type
+ */
+void state_event(fsm_event_t evnt);
+
+/*
+ * @state_is: test the current state
+ *
+ * @in_states: the state which to have check
+ *
+ * Return true if current state  is @@in_states, false otherwise
+ */
+bool state_is(fsm_state_t in_states);
+
+/*
+ * @state_print: print to stdout the current state
+ *
+ * @ctx: message to appen.
+ */
+void state_print(const char *ctx);
 #endif
