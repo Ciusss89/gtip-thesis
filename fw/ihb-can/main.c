@@ -33,6 +33,13 @@
 
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
+/* ASCII message "" */
+static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x55, 0x53, 0x59, 0};
+/* ASCII message "" */
+static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0x45, 0};
+/* ASCII message "_IHB..V_" */
+static const unsigned char mgc[] = {0x5F, 0x49, 0x48, 0x42, 0x05, 0xF5, 0x56, 0x5F, 0};
+
 static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
 static kernel_pid_t pid_notify_node;
 
@@ -106,45 +113,94 @@ static uint8_t _power_down(uint8_t ifnum)
 	return 0;
 }
 
+static void _start_isotp_tx(void)
+{
+	/* Open the iso-tp socket */
+	ihb_isotp_init(can->can_perh_id,
+		       ISOTP_TIMEOUT_DEF,
+		       &(can->can_isotp_ready));
+
+	/* Send the ihb-info as first chunks */
+	if (ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1) > 0) {
+		free(info);
+		can->can_isotp_ready = true;
+		thread_wakeup(pid_of_data_source);
+		puts("[*] ihb: node is sending data");
+	} else {
+		/* !TODO: Handle this patch code */
+		ihb_isotp_close();
+	}
+}
+
+static bool _raw_init(conn_can_raw_t *socket,
+		      struct can_frame *frame,
+		      struct can_filter *filter)
+{
+	int r;
+
+	r = conn_can_raw_create(socket, NULL, 0, can->can_perh_id, 0);
+	if (r < 0) {
+		printf("[!] cannot create the CAN socket: err=%d\n", r);
+		return false;
+	}
+
+	/*  Configure the frame which has to be send */
+	frame->can_id = can->can_frame_id;
+	frame->can_dlc = 8;
+	memcpy(frame->data, &mgc, 8);
+	
+	/* Setup the filter for rcv socket */
+	filter->can_id = can->can_frame_id;
+	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
+
+	return true;
+}
+
+
+static bool _raw_frame_snd(conn_can_raw_t *socket,
+			   struct can_frame *frame,
+			   struct can_filter *filter)
+{
+	int r;
+
+	/* Remove hw filter */
+	r = conn_can_raw_set_filter(socket, NULL, 0);
+	if (r < 0) {
+		printf("[!] cannot remove filter from socket: err=%d", r);
+		return false;
+	}
+
+	/* Send */
+	r = conn_can_raw_send(socket, frame, 0);
+	if (r < 0) {
+		printf("[!] error sending the CAN frame: err=%d\n", r);
+		return false;
+	}
+
+	/* Set hw filer */
+	r = conn_can_raw_set_filter(socket, filter, 1);
+	if (r < 0) {
+		printf("[!] cannot add the filter to the socket: err=%d", r);
+		return false;
+	}
+
+	xtimer_usleep(WAIT_100ms);
+
+	return true;
+}
+
 static void *_thread_notify_node(__attribute__((unused)) void *arg)
 {
-	const unsigned char busy[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x55, 0x53, 0x59, 0};
-	const unsigned char idle[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0x45, 0};
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
 	conn_can_raw_t conn;
 	int r;
 
-	r = conn_can_raw_create(&conn, NULL, 0, can->can_perh_id, 0);
-	if (r < 0) {
-		printf("[!] cannot create the CAN socket: err=%d\n", r);
-		return NULL;
-	}
-
-	can->status_notify_node = true;
-
-	/*
-	 * Configure the frame which has to be sent
-	 * - IHB's MAGIC: ASCII "_IHB..V_"
-	 * - TODO! Pass the magic as configurable paramiter from the Makefile
-	 */
-	snd_frame->can_id = can->can_frame_id;
-	snd_frame->can_dlc = 8;
-	snd_frame->data[0] = 0x5F;
-	snd_frame->data[1] = 0x49;
-	snd_frame->data[2] = 0x48;
-	snd_frame->data[3] = 0x42;
-	snd_frame->data[4] = 0x05;
-	snd_frame->data[5] = 0xF5;
-	snd_frame->data[6] = 0x56;
-	snd_frame->data[7] = 0x5F;
-
-	/*
-	 * Setup the filter for rcv socket
-	 */
-	filter->can_id = can->can_frame_id;
-	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
+	if (_raw_init(&conn, snd_frame, filter))
+		can->status_notify_node = true;
+	else
+		goto err;
 
 	do {
 
@@ -157,28 +213,10 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		 * the not masters nodes have to switch to listening mode.
 		 */
 		if(can->status_notify_node) {
-			r = conn_can_raw_set_filter(&conn, NULL, 0);
-			if (r < 0) {
-				printf("[!] cannot remove filter from socket: err=%d", r);
+			if(!_raw_frame_snd(&conn, snd_frame, filter)) {
 				can->status_notify_node = false;
 				break;
 			}
-
-			r = conn_can_raw_send(&conn, snd_frame, 0);
-			if (r < 0) {
-				printf("[!] error sending the CAN frame: err=%d\n", r);
-				can->status_notify_node = false;
-				break;
-			}
-
-			r = conn_can_raw_set_filter(&conn, filter, 1);
-			if (r < 0) {
-				printf("[!] cannot add the filter to the socket: err=%d", r);
-				can->status_notify_node = false;
-				break;
-			}
-
-			xtimer_usleep(WAIT_100ms);
 		}
 
 		/*
@@ -203,7 +241,7 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 			if(rcv_frame->can_dlc == 8) {
 
 				/* Is master ? */
-				r = memcmp(&busy, rcv_frame->data,
+				r = memcmp(&mstr, rcv_frame->data,
 					   rcv_frame->can_dlc);
 				if (r == 0) {
 					can->status_notify_node = false;
@@ -213,12 +251,12 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 				}
 
 				/* Is slave ? */
-				r = memcmp(&idle, rcv_frame->data,
+				r = memcmp(&bckp, rcv_frame->data,
 					   rcv_frame->can_dlc);
 				if (r == 0) {
 					can->status_notify_node = false;
 					can->master = false;
-					puts("[*] This node is SLAVE");
+					puts("[*] This node is a BACKUP node");
 					break;
 				}
 			}
@@ -233,37 +271,19 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 	 */
 	} while (!can->master || can->status_notify_node);
 
-	if (conn_can_raw_close(&conn) < 0)
+	r = conn_can_raw_close(&conn);
+	if (r < 0)
 		printf("[!] error closing the CAN socket: err=%d\n", r);
 
+err:
 	free(snd_frame);
 	free(rcv_frame);
 	free(filter);
 
 	/* Switch to transmission */
 	if(can->master && !us_overdrive) {
-		/* Open the iso-tp socket */
 		xtimer_usleep(WAIT_100ms);
-		ihb_isotp_init(can->can_perh_id,
-			       ISOTP_TIMEOUT_DEF,
-			       &(can->can_isotp_ready));
-
-		/* Send the ihb-info as first chunks */
-		xtimer_usleep(WAIT_500ms);
-		r = ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1);
-		if (r > 0) {
-			/* Destrory ihb info */
-			free(info);
-
-			can->can_isotp_ready = true;
-			thread_wakeup(pid_of_data_source);
-			puts("[*] ihb: ready to send data");
-		} else {
-			can->can_isotp_ready = false;
-			/* !TODO: Handle this patch code */
-			ihb_isotp_close();
-		}
-
+		_start_isotp_tx();
 	}
 
 	return NULL;
@@ -329,6 +349,7 @@ void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 
 	if(CPUID_LEN > MAX_MCU_ID_LEN) {
 		puts("[!] CPUID_LEN > MAX_CPUID_LEN");
+		free(can);
 		return;
 	}
 
@@ -367,6 +388,7 @@ void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	if(r != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
+		free(can);
 		return;
 	}
 
@@ -378,6 +400,7 @@ void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 					"ihb notify node");
 	if(pid_notify_node < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create thread notify node");
+		free(can);
 		return;
 	}
 
