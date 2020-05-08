@@ -56,14 +56,14 @@ do
 	gnome-terminal -q -- $CMD
 done
 
-sleep 2
-echo "[*] Starting ISOTP CAN dump on periph $CAN"
-CMD="isotprecv $CAN -s 708 -d 700 -l"
-gnome-terminal -q -- $CMD
+#sleep 2
+#echo "[*] Starting ISOTP CAN dump on periph $CAN"
+#CMD="isotprecv $CAN -s 708 -d 700 -l"
+#gnome-terminal -q -- $CMD
 
-sleep 2
-echo "[*] Starting ISOTP CAN perf on periph $CAN"
-CMD="isotpperf $CAN -s 700 -d 708"
-gnome-terminal -q -- $CMD
+#sleep 2
+#echo "[*] Starting ISOTP CAN perf on periph $CAN"
+#CMD="isotpperf $CAN -s 700 -d 708"
+#gnome-terminal -q -- $CMD
 
 echo "[*] All consoles have been starded"
