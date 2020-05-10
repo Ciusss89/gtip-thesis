@@ -63,20 +63,16 @@ typedef struct state_transition_table {
  *
  * @mcu_controller_uid: MCU's unique ID
  * @can_drv_name: the name of the can controller
- * @status_notify_node: if true the IHB node is announcing itself on CAN bus
  * @can_frame_id: can frame identifier, it's obtainded by the MCU unique ID
  * @can_isotp_ready: if true the IHB can send the isotp chunks to host
  * @can_perh_id: peripheral identifier of the MCU's CAN controller
- * @master: true when the IHB node is master
  */
 struct ihb_can_ctx {
 	char mcu_controller_uid[MAX_MCU_ID_LEN * 2 + 1];
 	char can_drv_name[CAN_NAME_LEN];
-	bool status_notify_node;
 	uint8_t can_frame_id;
 	bool can_isotp_ready;
 	uint8_t can_perh_id;
-	bool master;
 };
 
 /* FILE: ihb-can/main.c */
