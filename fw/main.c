@@ -67,9 +67,6 @@ static const shell_command_t shell_commands[] = {
 #ifdef MODULE_UPTIME
 	{ "uptime", UPTIME_THREAD_HELP, _uptime_handler},
 #endif
-#ifdef MODULE_IHBCAN
-	{ "ihbcan", IHB_USERSPACE_HELP, ihb_can_handler},
-#endif
 #ifdef MODULE_IHBNETSIM
 	{ "skin", SK_USERSPACE_HELP, skin_node_handler},
 #endif

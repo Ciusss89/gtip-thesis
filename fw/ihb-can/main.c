@@ -51,17 +51,6 @@ static kernel_pid_t pid_of_data_source;
 static struct ihb_node_info *info = NULL;
 static struct ihb_can_ctx *can = NULL;
 
-/* true if runs an userspace tool */
-static bool us_overdrive = false;
-
-static void _usage(void)
-{
-	puts("IHBCAN userspace");
-	puts("\tihbcan canON     - turn on can controller");
-	puts("\tihbcan canOFF    - turn off can controller");
-	puts("\tihbcan notifyOFF - teardown pid_notify_node");
-}
-
 static int  _scan_for_controller(struct ihb_can_ctx *device)
 {
 	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
@@ -74,42 +63,6 @@ static int  _scan_for_controller(struct ihb_can_ctx *device)
 	}
 
 	return 1;
-}
-
-static uint8_t _power_up(uint8_t ifnum)
-{
-	uint8_t ret;
-
-	if (ifnum >= CAN_DLL_NUMOF) {
-		puts("[!] Invalid interface number");
-		return 1;
-	}
-
-	ret = raw_can_power_up(ifnum);
-	if (ret != 0) {
-		printf("[!] Error when powering up: err=-%d\n", ret);
-		return 1;
-	}
-
-	return 0;
-}
-
-static uint8_t _power_down(uint8_t ifnum)
-{
-
-	uint8_t ret = 0;
-	if (ifnum >= CAN_DLL_NUMOF) {
-		puts("[!] Invalid interface number");
-		return 1;
-	}
-
-	ret = raw_can_power_down(ifnum);
-	if (ret != 0) {
-		printf("[!] Error when powering up: err=-%d\n", ret);
-		return 1;
-	}
-
-	return 0;
 }
 
 static void _start_isotp_tx(void)
@@ -212,9 +165,6 @@ static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 
 	do {
 
-		if(us_overdrive)
-			break;
-
 		/*
 		 * The raw frame must be sent until the HOST doesn't discovery
 		 * me. When the HOST has assigned all roles to the IHBs nodes,
@@ -289,7 +239,7 @@ err:
 	free(filter);
 
 	/* Switch to transmission */
-	if(can->master && !us_overdrive) {
+	if(can->master) {
 		xtimer_usleep(WAIT_100ms);
 		_start_isotp_tx();
 	}
@@ -310,29 +260,6 @@ void ihb_can_module_info(struct ihb_can_ctx *can)
 		can->can_frame_id);
 
 	return;
-}
-
-int ihb_can_handler(int argc, char **argv)
-{
-	if (argc < 2) {
-		_usage();
-		return 1;
-	} else if (strncmp(argv[1], "canON", 6) == 0) {
-		return _power_up(can->can_perh_id);
-	} else if (strncmp(argv[1], "canOFF", 7) == 0) {
-		return _power_down(can->can_perh_id);
-	} else if (strncmp(argv[1], "notifyOFF", 10) == 0) {
-		if(can->status_notify_node) {
-			us_overdrive = true;
-			can->status_notify_node = false;
-		} else
-			puts("[*] ihb: notify is not running");
-	}  else {
-		printf("unknown command: %s\n", argv[1]);
-		return 1;
-	}
-
-	return 0;
 }
 
 int ihb_can_init(void *ctx, kernel_pid_t _data_source)

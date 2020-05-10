@@ -85,18 +85,6 @@ struct ihb_can_ctx {
 void ihb_can_module_info(struct ihb_can_ctx *ctx);
 
 /*
- * @ihb_can_handler: handler of can user-space tools
- *
- * These tools are util to develop the CAN module:
- * > canON  - turn on can controller
- * > canOFF - turn off can controller
- * > notifyOFF - teardown pid_notify_node
- *
- * It requires the Riot-os shell.
- */
-int ihb_can_handler(int argc, char **argv);
-
-/*
  * @ihb_can_init: inizialize the CAN module.
  *
  * @ctx: pointer of struct ihb_ctx
