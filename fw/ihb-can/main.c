@@ -46,14 +46,12 @@ static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x43, 0x4B, 0
 
 static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
 
-/*
- * PID of the process that generate the data which have to sent by isotp
- * transmission.
- */
+/* PID which generate the data which have to sent by isotp */
 static kernel_pid_t pid_of_data_source;
 
 static struct ihb_node_info *info = NULL;
 static struct ihb_can_ctx *can = NULL;
+static uint8_t LSBytes[2];
 
 static int  _scan_for_controller(struct ihb_can_ctx *device)
 {
@@ -100,10 +98,14 @@ static bool _raw_init(conn_can_raw_t *socket,
 		return false;
 	}
 
-	/*  Configure the frame which has to be send */
+	/* Configure the frame which has to be send */
 	frame->can_id = can->can_frame_id;
 	frame->can_dlc = 8;
-	memcpy(frame->data, &mgc, 8);
+
+	/* Last two bytes of message are the LSBytes of MCU unique id */
+	memcpy(frame->data, &mgc, 6);
+	frame->data[6] = LSBytes[0];
+	frame->data[7] = LSBytes[1];
 	
 	/* Setup the filter for rcv socket */
 	filter->can_id = can->can_frame_id;
@@ -111,7 +113,6 @@ static bool _raw_init(conn_can_raw_t *socket,
 
 	return true;
 }
-
 
 static bool _raw_frame_snd(conn_can_raw_t *socket,
 			   struct can_frame *frame,
@@ -288,6 +289,10 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	b = data2str(unique_id, CPUID_LEN);
 	strcpy(can->mcu_controller_uid, b);
 	free(b);
+
+	/* For STM target the least significant bit are first two.. */
+	LSBytes[0] = unique_id[0];
+	LSBytes[1] = unique_id[1];
 
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID
