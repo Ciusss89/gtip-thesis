@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "thread.h"
+
 #define IHB_USERSPACE_HELP "ihb-can userspace tool"
 #define IHB_THREAD_HELP "ihb-can driver"
 
@@ -11,10 +13,16 @@
 #define CAN_NAME_LEN (16 + 1)
 
 /* Maximum length for MCU id string */
-#define MAX_MCU_ID_LEN (16)
+#define MAX_MCU_ID_LEN (16u)
+#if defined CPUID_LEN && MAX_MCU_ID_LEN <= CPUID_LEN
+#error "CPUID_LEN > MAX_CPUID_LEN"
+#endif
 
 /* MCU can have one or more CAN controllers, use first (0) */
 #define CAN_C (0)
+#if defined CAN_DLL_NUMOF && CAN_DLL_NUMOF == 0
+#error "NO CAN controller avaible"
+#endif
 
 /* Timeout for ISO TP transmissions */
 #ifndef ISOTP_TIMEOUT_DEF
@@ -95,8 +103,10 @@ int ihb_can_handler(int argc, char **argv);
  * @_data_source: pid of process which generates payload
  *
  * In case of success it adds the ihb_can_ctx struct pointer to ihb_ctx.
+ *
+ * Return pid of can handler thread on a success, num < 0 otherwise.
  */
-void ihb_can_init(void *ctx, kernel_pid_t _data_source);
+int ihb_can_init(void *ctx, kernel_pid_t _data_source);
 
 /* FILE: ihb-can/sender.c */
 

@@ -40,8 +40,7 @@ static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0
 /* ASCII message "_IHB..V_" */
 static const unsigned char mgc[] = {0x5F, 0x49, 0x48, 0x42, 0x05, 0xF5, 0x56, 0x5F, 0};
 
-static char notify_node_stack[THREAD_STACKSIZE_MEDIUM];
-static kernel_pid_t pid_notify_node;
+static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
 
 /*
  * PID of the process that generate the data which have to sent by isotp
@@ -189,7 +188,14 @@ static bool _raw_frame_snd(conn_can_raw_t *socket,
 	return true;
 }
 
-static void *_thread_notify_node(__attribute__((unused)) void *arg)
+static void _add_can_info(void)
+{
+	strncpy(info->mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
+	info->mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
+	info->isotp_timeo = ISOTP_TIMEOUT_DEF;
+}
+
+static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 {
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
@@ -201,6 +207,8 @@ static void *_thread_notify_node(__attribute__((unused)) void *arg)
 		can->status_notify_node = true;
 	else
 		goto err;
+
+	_add_can_info();
 
 	do {
 
@@ -317,8 +325,6 @@ int ihb_can_handler(int argc, char **argv)
 		if(can->status_notify_node) {
 			us_overdrive = true;
 			can->status_notify_node = false;
-			printf("[*] ihb: terminate %d\n", pid_notify_node);
-			pid_notify_node = -1;
 		} else
 			puts("[*] ihb: notify is not running");
 	}  else {
@@ -329,30 +335,15 @@ int ihb_can_handler(int argc, char **argv)
 	return 0;
 }
 
-void ihb_can_init(void *ctx, kernel_pid_t _data_source)
+int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 {
 	struct ihb_ctx *IHB = ctx;
 	uint8_t unique_id[CPUID_LEN];
-	uint8_t r = 1;
+	kernel_pid_t pid;
 	char *b;
 
 	can = xmalloc(sizeof(struct ihb_can_ctx));
-
-	info = IHB->ihb_info;
-
-	if(CAN_DLL_NUMOF == 0)
-		puts("[!] no CAN controller avaible");
-	else
-		DEBUG("[#] MCU has %d can controller\n", CAN_DLL_NUMOF);
-
-	if(CPUID_LEN > MAX_MCU_ID_LEN) {
-		puts("[!] CPUID_LEN > MAX_CPUID_LEN");
-		free(can);
-		return;
-	}
-
-	can->master = false;
-	can->can_isotp_ready = false;
+	memset(can, 0, sizeof(struct ihb_can_ctx));
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -363,17 +354,9 @@ void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 		puts("");
 	}
 
-	b = xmalloc(CPUID_LEN * 2 + 1);
 	b = data2str(unique_id, CPUID_LEN);
-	
-	/* Save the MCU unique ID */
 	strcpy(can->mcu_controller_uid, b);
 	free(b);
-
-	strncpy(info->mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
-	info->mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
-
-	info->isotp_timeo = ISOTP_TIMEOUT_DEF;
 
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID
@@ -382,32 +365,37 @@ void ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	can->can_frame_id = fletcher8(unique_id, MAX_MCU_ID_LEN);
 	DEBUG("[*] CAN ID=%d\n", can->can_frame_id);
 
-	r = _scan_for_controller(can);
-	if(r != 0) {
+	if( _scan_for_controller(can) != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
 		free(can);
-		return;
+		return -1;
 	}
 
-	pid_notify_node = thread_create(notify_node_stack,
-					sizeof(notify_node_stack),
-					THREAD_PRIORITY_MAIN - 2,
-					THREAD_CREATE_WOUT_YIELD,
-					_thread_notify_node, NULL,
-					"ihb notify node");
-	if(pid_notify_node < KERNEL_PID_UNDEF) {
-		puts("[!] cannot create thread notify node");
+	pid = thread_create(can_handler_node_stack,
+			    sizeof(can_handler_node_stack),
+			    THREAD_PRIORITY_MAIN - 2,
+			    THREAD_CREATE_SLEEPING,
+			    _can_fsm_thread, NULL,
+			    "ihb can handler");
+
+	if(pid < KERNEL_PID_UNDEF) {
+		puts("[!] cannot create ihb can handler thread");
 		free(can);
-		return;
+		return -1;
 	}
 
-	/* Make visible the CAN' stuff where we need */
-	IHB->pid_notify_node = &pid_notify_node;
+	/* Save the can CAN context */
 	IHB->can = can;
 
-	/* Save the PID which generates the data which have to sent */
+	/* Get the ihb_info context */
+	info = IHB->ihb_info;
+
+	/* Get the PID which generates the data to sent */
 	pid_of_data_source = _data_source;
 
 	DEBUG("[*] IHB: init CAN subumodule success");
+
+	thread_wakeup(pid);
+	return pid;
 }

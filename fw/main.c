@@ -45,7 +45,7 @@ static int ihb_struct_list(__attribute__((unused)) int argc,
 #ifdef MODULE_IHBCAN
 	if(IHB.can) {
 		ihb_can_module_info(IHB.can);
-		printf("- PIDs:\n\tnotify=%d\n", *IHB.pid_notify_node);
+		printf("- PIDs:\n\tnotify=%d\n", IHB.pid_can_handler);
 	} else {
 		puts("[!] BUG: struct ihb_can_ctx never should be null");
 	}
@@ -138,7 +138,6 @@ static int ihb_init(void)
 
 #ifdef MODULE_IHBCAN
 	IHB.can = NULL;
-	IHB.pid_notify_node = NULL;
 	puts("[*] MODULE_IHBCAN");
 
 	/*
@@ -149,8 +148,8 @@ static int ihb_init(void)
 	if(pid_data_gen < KERNEL_PID_UNDEF)
 		return -1;
 
-	ihb_can_init(&IHB, pid_data_gen);
-	if(!IHB.can || !IHB.pid_notify_node)
+	IHB.pid_can_handler = ihb_can_init(&IHB, pid_data_gen);
+	if(!IHB.can || IHB.pid_can_handler < KERNEL_PID_UNDEF)
 		return -1;
 #endif
 
