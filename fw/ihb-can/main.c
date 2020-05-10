@@ -33,12 +33,16 @@
 
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
-/* ASCII message "" */
-static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x55, 0x53, 0x59, 0};
-/* ASCII message "" */
-static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0x4C, 0x45, 0};
-/* ASCII message "_IHB..V_" */
-static const unsigned char mgc[] = {0x5F, 0x49, 0x48, 0x42, 0x05, 0xF5, 0x56, 0x5F, 0};
+/* ASCII message "IHB-ID" : ihb discovery message sent on CAN bus */
+static const unsigned char mgc[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0};
+/* ASCII message "IHB-" : receive new address by ihbtool, runtime fix */
+static const unsigned char add_fix[] = {0x49, 0x48, 0x42, 0x2D, 0};
+/* ASCII message "IHB-WKUP" : switch the node in notify state */
+static const unsigned char wkup[] = {0x49, 0x48, 0x42, 0x2D, 0x57, 0x4B, 0x55, 0x50, 0};
+/* ASCII message "IHB-MSTR" : switch the node in action state */
+static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x4D, 0x53, 0x54, 0x52, 0};
+/* ASCII message "IHB-BCKP" : switch the node in backup state */
+static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x43, 0x4B, 0x50, 0};
 
 static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
 
