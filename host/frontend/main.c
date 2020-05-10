@@ -98,6 +98,11 @@ int main(int argc, char **argv)
 	if (r < 0)
 		goto _fail0;
 
+	/* Send wakeup to all IHBs on bus */
+	r = ihbs_wakeup(can_soc_raw);
+	if (r < 0)
+		goto _fail1;
+
 	/* Start discovery of the nodes */
 	r = ihb_discovery(can_soc_raw, verbose, &master_id, &ihb_nodes);
 	if (r < 0)

@@ -98,6 +98,31 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 	return -1;
 }
 
+int ihbs_wakeup(int s)
+{
+	int r = -1, required_mtu = -1;
+	struct canfd_frame frame;
+	char *cmd;
+
+	frame.len = 8;
+
+	r = asprintf(&cmd, "%03x#%s", IHBTOLL_FRAME_ID, msg_wkup);
+	if (r < 0) {
+		fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
+		return -1;
+	}
+
+	required_mtu = parse_canframe(cmd, &frame);
+
+	/* send frame */
+	if (write(s, &frame, required_mtu) != required_mtu)
+		r = -1;
+
+	free(cmd);
+
+	return r;
+}
+
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
 	struct canfd_frame frame;

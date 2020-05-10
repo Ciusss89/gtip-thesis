@@ -12,6 +12,9 @@
 /* SK_T_S: Skin Tactile sensors per skin node */
 #define SK_T_S (12u)
 
+/* ASCII message "IHB-WKUP" : switch the node in notify state */
+const char *msg_wkup = "4948422D574B5550";
+
 /**
  * struct skin_node - represent the collected data that is incoming by skin nodes
  *

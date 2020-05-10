@@ -40,6 +40,15 @@ static struct ihb_node *ihbs = NULL;
 
 bool running;
 
+/*
+ * @ihbs_wakeup: - wake up all IHBs nodes
+ *
+ * @s: socket can
+ *
+ * In case of error returns a num < 0.
+ */
+int ihbs_wakeup(int s);
+
 int ihb_setup(int s, uint8_t c_id_master, bool v);
 
 /*
@@ -58,14 +67,14 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d);
 int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes);
 
 /*
- * @ihb_rcv_data - receive the isotp data by ihb
+ * @ihb_rcv_data: - receive the isotp data by ihb
  *
  * @can_soc_fd: socket isotp.
  * @ptr: not used yet, pass NULL.
  * @verbose: when true prints the contents of received data.
  * @perf: when true prints the speed/timing info.
  *
- * In case of error returns a <0.
+ * In case of error returns a num < 0.
  */
 int ihb_rcv_data(int can_soc_fd, void **ptr, bool verbose, bool perf);
 
