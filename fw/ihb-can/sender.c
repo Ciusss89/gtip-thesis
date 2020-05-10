@@ -121,6 +121,7 @@ int ihb_isotp_close(void)
 	DEBUG("[#] The IS0-TP socket has been closed\n");
 	sck_ready = false;
 	*ex_sck_ready = false;
+	state_event(FAIL);
 err:
 	return r;
 }

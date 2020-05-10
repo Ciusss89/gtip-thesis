@@ -108,22 +108,81 @@ static bool _raw_init(conn_can_raw_t *socket,
 	frame->data[7] = LSBytes[1];
 	
 	/* Setup the filter for rcv socket */
-	filter->can_id = can->can_frame_id;
 	filter->can_mask = CAN_SFF_MASK | CAN_RTR_FLAG;
 
 	return true;
 }
 
+static void _raw_frame_analize(struct can_frame *frame)
+{
+	if (state_is(NOTIFY) || state_is(BACKUP)) {
+
+		/*
+		 * IHBTOOL to confiure an IHB must send a message which matches
+		 * its can frame id
+		 */
+		if(frame->can_id == can->can_frame_id) {
+
+			/* Is it master ? */
+			if (memcmp(&mstr, frame->data, frame->can_dlc) == 0) {
+				state_event(MASTER);
+				return;
+			}
+
+			/* Is it slave ? */
+			if (memcmp(&bckp, frame->data, frame->can_dlc) == 0) {
+				state_event(SLAVE);
+				return;
+			}
+
+			/*
+			 *                      ┌ New CAN frame id
+			 * ASCI Message: IHB-XX=Y
+			 *                   ||
+			 *        LSBytes[0] ┘└ LSBytes[1]
+			 *
+			 * Fix runtime the addressing, last byte contains the new
+			 * frame identifier which must be used
+			 */
+			if (memcmp(&add_fix, frame->data, 4) == 0) {
+				state_event(RUNT_FIX);
+
+				if (frame->data[4] == LSBytes[0] &&
+				    frame->data[5] == LSBytes[1])
+					can->can_frame_id = frame->data[8];
+				return;
+			}
+		}
+
+	} else if (state_is(IDLE)) {
+
+		/*
+		 * IHBTOOL to wake up an IHB have to send a broadcast message
+		 * with frame id IHBTOLL_FRAME_ID
+		 */
+		if (memcmp(&wkup, frame->data, frame->can_dlc) == 0 &&
+		    frame->can_id == IHBTOLL_FRAME_ID) {
+			state_event(WAKEUP);
+			return;
+		}
+	}
+}
+
 static bool _raw_frame_snd(conn_can_raw_t *socket,
 			   struct can_frame *frame,
-			   struct can_filter *filter)
+			   struct can_filter *filter,
+			   bool init)
 {
 	int r;
+
+	if(init)
+		goto first_run;
 
 	/* Remove hw filter */
 	r = conn_can_raw_set_filter(socket, NULL, 0);
 	if (r < 0) {
 		printf("[!] cannot remove filter from socket: err=%d", r);
+		state_event(FAIL);
 		return false;
 	}
 
@@ -131,13 +190,16 @@ static bool _raw_frame_snd(conn_can_raw_t *socket,
 	r = conn_can_raw_send(socket, frame, 0);
 	if (r < 0) {
 		printf("[!] error sending the CAN frame: err=%d\n", r);
+		state_event(FAIL);
 		return false;
 	}
 
-	/* Set hw filer */
+first_run:
+	/* Set hw filer to receive frame which have my CAN frame ID */
 	r = conn_can_raw_set_filter(socket, filter, 1);
 	if (r < 0) {
 		printf("[!] cannot add the filter to the socket: err=%d", r);
+		state_event(FAIL);
 		return false;
 	}
 
@@ -159,27 +221,34 @@ static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
 	conn_can_raw_t conn;
+	bool first_run = true;
 	int r;
 
-	if (_raw_init(&conn, snd_frame, filter))
-		can->status_notify_node = true;
-	else
+	_add_can_info();
+	state_init();
+
+try_again:
+
+	if (state_is(TOFIX))
+		state_event(FIXED);
+
+	if (!_raw_init(&conn, snd_frame, filter))
 		goto err;
 
-	_add_can_info();
-
 	do {
+		if (state_is(IDLE))
+			filter->can_id = IHBTOLL_FRAME_ID;
+		else if (state_is(NOTIFY))
+			filter->can_id = can->can_frame_id;
 
 		/*
-		 * The raw frame must be sent until the HOST doesn't discovery
-		 * me. When the HOST has assigned all roles to the IHBs nodes,
-		 * the not masters nodes have to switch to listening mode.
+		 * The raw frame must be sent until the HOST doesn't configure
+		 * the IHB
 		 */
-		if(can->status_notify_node) {
-			if(!_raw_frame_snd(&conn, snd_frame, filter)) {
-				can->status_notify_node = false;
+		if (state_is(NOTIFY) || first_run) {
+			if (!_raw_frame_snd(&conn, snd_frame, filter, first_run))
 				break;
-			}
+			first_run = false;
 		}
 
 		/*
@@ -191,7 +260,7 @@ static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
 			 == sizeof(struct can_frame))) {
 
-			if(ENABLE_DEBUG) {
+			if (ENABLE_DEBUG) {
 				printf("[#] ihbcan: ID=%"PRIu32"  DLC=[%u] DATA=",
 						rcv_frame->can_id,
 						rcv_frame->can_dlc);
@@ -200,39 +269,11 @@ static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 				puts("");
 			}
 
-			/* The message should be 8 byte lenght */
-			if(rcv_frame->can_dlc == 8) {
-
-				/* Is master ? */
-				r = memcmp(&mstr, rcv_frame->data,
-					   rcv_frame->can_dlc);
-				if (r == 0) {
-					can->status_notify_node = false;
-					can->master = true;
-					puts("[*] This node is MASTER");
-					break;
-				}
-
-				/* Is slave ? */
-				r = memcmp(&bckp, rcv_frame->data,
-					   rcv_frame->can_dlc);
-				if (r == 0) {
-					can->status_notify_node = false;
-					can->master = false;
-					puts("[*] This node is a BACKUP node");
-					break;
-				}
-			}
+			if (rcv_frame->can_dlc == 8)
+				_raw_frame_analize(rcv_frame);
 		}
 
-	/*
-	 * Loop condition
-	 *  - raw send/rcv until no errors on the CAN APIs && status_notify_node
-	 *    is true
-	 *  - olny raw rcv until no errors on the CAN APIs && status_notify_node
-	 *    if false
-	 */
-	} while (!can->master || can->status_notify_node);
+	} while (state_is(IDLE) || state_is(NOTIFY) || state_is(BACKUP));
 
 	r = conn_can_raw_close(&conn);
 	if (r < 0)
@@ -243,8 +284,13 @@ err:
 	free(rcv_frame);
 	free(filter);
 
+	if (state_is(TOFIX)) {
+		first_run = true;
+		goto try_again;
+	}
+
 	/* Switch to transmission */
-	if(can->master) {
+	if (state_is(ACTIVE)) {
 		xtimer_usleep(WAIT_100ms);
 		_start_isotp_tx();
 	}
@@ -330,7 +376,7 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	/* Get the PID which generates the data to sent */
 	pid_of_data_source = _data_source;
 
-	DEBUG("[*] IHB: init CAN subumodule success");
+	DEBUG("[*] IHB: init CAN subumodule success\n");
 
 	thread_wakeup(pid);
 	return pid;
