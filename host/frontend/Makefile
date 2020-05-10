@@ -18,7 +18,8 @@ LIBS ?=
 
 EXTRA_CFLAGS += \
 		-Iinclude \
-		-D IHBTOOL_VER=\"$(shell git describe --tags)-$(shell date --iso=date)\"
+		-D IHBTOOL_VER=\"$(shell git describe --tags)-$(shell date --iso=date)\" \
+		-D IHBTOLL_FRAME_ID=0x100
 
 DEPS = ihb.h lib.h
 OBJ = main.o ihblib.o lib.o
