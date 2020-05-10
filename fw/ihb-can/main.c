@@ -295,13 +295,11 @@ void ihb_can_module_info(struct ihb_can_ctx *can)
 		(void *)can,
 		sizeof(struct ihb_can_ctx));
 
-	printf("\n\tCAN controller num=%d\n\tCAN driver name=%s\n\tMCU id=%s\n\tCAN frame id=%#x\n\trole=%s\n\tnotify=%s\n",
+	printf("\n\tCAN controller num=%d\n\tCAN driver name=%s\n\tMCU id=%s\n\tCAN frame id=%#x\n",
 		can->can_perh_id,
 		can->can_drv_name,
 		can->mcu_controller_uid,
-		can->can_frame_id,
-		can->master ? "master" : "idle",
-		can->status_notify_node ? "is running" : "no");
+		can->can_frame_id);
 
 	return;
 }
