@@ -154,9 +154,9 @@ void state_event(fsm_event_t evnt);
 bool state_is(fsm_state_t in_states);
 
 /*
- * @state_print: print to stdout the current state
+ * @state_print: returns into about current state
  *
- * @ctx: message to appen.
+ * Return a pointer which contains the name of current state.
  */
-void state_print(const char *ctx);
+char *state_print(void);
 #endif

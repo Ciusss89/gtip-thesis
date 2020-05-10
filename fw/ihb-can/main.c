@@ -310,6 +310,8 @@ void ihb_can_module_info(struct ihb_can_ctx *can)
 		can->mcu_controller_uid,
 		can->can_frame_id);
 
+	printf("- FSM state = %s\n", state_print());
+
 	return;
 }
 

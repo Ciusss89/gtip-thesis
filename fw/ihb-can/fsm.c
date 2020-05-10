@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#define ENABLE_DEBUG    (0)
+#include "debug.h"
+
 #include "can.h"
 
 static fsm_state_t can_state;
@@ -25,6 +28,7 @@ void state_event(fsm_event_t evnt)
 		if((transition[i].state == can_state) &&
 		   (transition[i].trans == evnt)) {
 			can_state = transition[i].nextstate;
+			DEBUG("[#] IHB state-next-->%s\n",state_print());
 			return;
 		}
 	}
@@ -45,30 +49,25 @@ void state_init(void)
 	can_state = IDLE;
 }
 
-void state_print(const char *ctx)
+char *state_print(void)
 {
 	switch (can_state)
 	{
 		case IDLE:
-			printf("[*] IHB %s, state = IDLE\n", ctx);
-			break;
+			return "IDLE";
 		case NOTIFY:
-			printf("[*] IHB %s, state = NOTIFY\n", ctx);
-			break;
+			return "NOTIFY";
 		case BACKUP:
-			printf("[*] IHB %s, state = BACKUP\n", ctx);
-			break;
+			return "BACKUP";
 		case ACTIVE:
-			printf("[*] IHB %s, state = ACTIVE\n", ctx);
-			break;
+			return "ACTIVE";
 		case TOFIX:
-			printf("[*] IHB %s, state = TOFIX\n", ctx);
-			break;
+			return "TOFIX";
 		case ERR:
-			printf("[*] IHB %s, state = ERROR\n", ctx);
-			break;
+			return "ERROR";
 		default:
-			printf("[*] IHB %s state = ??\n", ctx);
-			break;
+			return "NOT DEFINED";
 	}
+
+	return NULL;
 }
