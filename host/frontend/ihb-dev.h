@@ -12,8 +12,15 @@
 /* SK_T_S: Skin Tactile sensors per skin node */
 #define SK_T_S (12u)
 
+/* ASCII message "IHB-ID" : */
+const uint8_t IHBMAGIC[6] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44};
+
 /* ASCII message "IHB-WKUP" : switch the node in notify state */
 const char *msg_wkup = "4948422D574B5550";
+/* ASCII message "IHB-MSTR" : switch the node in action state */
+const char *msg_mstr = "4948422D4D535452";
+/* ASCII message "IHB-BCKP" : switch the node in backup state */
+const char *msg_bckp = "4948422D42434B50";
 
 /**
  * struct skin_node - represent the collected data that is incoming by skin nodes

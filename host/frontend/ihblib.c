@@ -136,18 +136,14 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 		if(!ihb->expired) {
 
 			if(ihb->canID == c_id_master) {
-				/* Send ASCII: IHB-BUSY to master node */
-				r = asprintf(&cmd, "%03x#4948422D42555359",
-					     ihb->canID);
+				r = asprintf(&cmd, "%03x#%s", ihb->canID, msg_mstr);
 				if (r < 0) {
 					fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
 					break;
 				}
 				ihb->best = true;
 			} else {
-				/* Send ASCII: IHB-BUSY to idle nodes */
-				r = asprintf(&cmd, "%03x#4948422D49444C45",
-					     ihb->canID);
+				r = asprintf(&cmd, "%03x#%s", ihb->canID, msg_bckp);
 				if (r < 0) {
 					fprintf(stderr, BOLDRED"[!] asprintf fails\n"RESET);
 					break;
@@ -232,21 +228,28 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 				printf("\n");
 			}
 
-			if (memcmp(frame_rd.data, IHBMAGIC, frame_rd.can_dlc) == 0) {
+			if (memcmp(frame_rd.data, IHBMAGIC, 6) == 0 &&
+				   frame_rd.can_dlc == 8) {
 
 				ihb = find_canID(frame_rd.can_id);
 				if (!ihb) {
 
-					ihb = (struct ihb_node *)malloc(sizeof(struct ihb_node));
+					ihb = malloc(sizeof(struct ihb_node));
 					if (ihb == NULL) {
 						fprintf(stderr, BOLDRED"[!] malloc failure:\n"RESET);
 						discovery = false;
 						return -1;
 					}
 
+					/*
+					 * Save two last bytes which contains
+					 * the LSBytes of mcu id.
+					 */
+					ihb->uid_LSBytes[0] = frame_rd.data[6];
+					ihb->uid_LSBytes[1] = frame_rd.data[7];
+
 					ihb->expired = false;
 					ihb->canID = frame_rd.can_id;
-					ihb->canP = NULL; /* not used for now */
 
 					HASH_ADD_INT(ihbs, canID, ihb);
 
@@ -258,7 +261,6 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 
 				if (frame_rd.can_id <= *wanna_be_master)
 					*wanna_be_master = frame_rd.can_id;
-
 			}
 
 			

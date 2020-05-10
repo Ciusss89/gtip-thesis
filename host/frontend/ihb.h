@@ -24,10 +24,9 @@
 
 #include "uthash.h"
 
-static const uint8_t IHBMAGIC[8] = {0x5F, 0x49, 0x48, 0x42, 0x05, 0xF5, 0x56, 0x5F};
-
 struct ihb_node {
 	/* Data */
+	uint8_t uid_LSBytes[2];
 	bool best, expired;
 	char *canP;
 	int canID;
