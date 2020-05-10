@@ -34,6 +34,10 @@ CFLAGS += -DISOTP_TX_PORT=0x700
 #
 CFLAGS += -DISOTP_RX_PORT=0x708
 
+## IHBCAN: Set the IHBTOOL broadcast frame id
+#
+CFLAGS += -DIHBTOLL_FRAME_ID=0x100
+
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 

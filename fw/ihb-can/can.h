@@ -29,6 +29,10 @@
 #define ISOTP_TIMEOUT_DEF (3u)
 #endif
 
+#ifndef IHBTOLL_FRAME_ID
+#define IHBTOLL_FRAME_ID 0x100
+#endif
+
 typedef enum {
 	IDLE = 0x0,
 	NOTIFY,
