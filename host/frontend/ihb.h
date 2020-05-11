@@ -26,7 +26,8 @@
 
 struct ihb_node {
 	/* Data */
-	uint8_t uid_LSBytes[2];
+	uint16_t uid_LSBytes[256];
+	uint8_t cnt;
 	bool best, expired;
 	char *canP;
 	int canID;
@@ -61,9 +62,26 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d);
 int ihb_init_socket_can(int *can_soc_fd, const char *d);
 
 /*
+ * @ihb_discovery: - discovery online IHB nodes
  *
+ * @fd: can raw socket
+ * @wanna_be_master: CAN ID of the current best IHB node
+ * @ihb_nodes: amount of all IHB nodes which has been discovered
+ * @array: input array used to track the CAN ID
+ * @v: if true enable verbose
+ *
+ * ihb_discovery listens the raw frame which are incoming on CAN bus. If a frame
+ * is valid the struct ihb_node will be filled with IHB's info like the CAN ID
+ * frame and the two last bytes of MCU id.
+ *
+ * For each node which has been discoverd:
+ *   - increse the counter of @ihb_nodes.
+ *   - sign as taken the CAN ID frame into @array
+ *   - save lowest CAN ID frame into @wanna_be_master
+ *
+ * Returns 0 in case of success, num < 0 othrewise.
  */
-int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes);
+int ihb_discovery(int fd, uint8_t *wanna_be_master, uint8_t *ihb_nodes, uint16_t **array, bool v);
 
 /*
  * @ihb_rcv_data: - receive the isotp data by ihb

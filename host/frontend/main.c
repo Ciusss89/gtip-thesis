@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 	bool verbose = false, isotp_fails = false, perf = false;
 	int can_soc_raw = 0, can_soc_isotp = 0;
 	uint8_t master_id = 255, ihb_nodes = 0;
+	uint16_t *id_nodes[255] = {NULL};
 	char *perph = NULL;
 	int c, r = 0;
 	void *data = NULL;
@@ -104,7 +105,7 @@ int main(int argc, char **argv)
 		goto _fail1;
 
 	/* Start discovery of the nodes */
-	r = ihb_discovery(can_soc_raw, verbose, &master_id, &ihb_nodes);
+	r = ihb_discovery(can_soc_raw, &master_id, &ihb_nodes, id_nodes, verbose);
 	if (r < 0)
 		goto _fail1;
 

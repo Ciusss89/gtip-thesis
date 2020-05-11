@@ -66,7 +66,6 @@ int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 	return -1;
 }
 
-
 int ihb_discovery_newone(uint8_t *master_id, bool v)
 {
 	struct ihb_node *ihb;
@@ -179,16 +178,94 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 	return r;
 }
 
+static void ihb_canID_collision(struct ihb_node *ihb, uint16_t current_new, uint8_t current_canID)
+{
 
-int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
+	if (current_canID != ihb->canID)
+		return;
+
+	/*
+	 * Return if the current_new is the node which has been handled
+	 * by ihb_add_new_node
+	 */
+	if (current_new == ihb->uid_LSBytes[0])
+		return;
+
+	/*
+	 * If a collision happens the IHB nodes which have the same CAN ID and
+	 * different uid_LSBytes must be add to the reconfigure list.
+	 */
+	for(int j = 1; j < 255; j ++) {
+		if (ihb->uid_LSBytes[j] == current_new)
+			return;
+	}
+
+	ihb->cnt = ihb->cnt + 1;
+	ihb->uid_LSBytes[ihb->cnt] = current_new;
+	fprintf(stdout, "[*] Add IHB=%#x which ends with %#x to reconfigure list, total %d\n",
+				ihb->canID, ihb->uid_LSBytes[ihb->cnt], ihb->cnt);
+}
+
+static int ihb_add_new_node(struct ihb_node **out, struct can_frame fr,
+			    uint8_t *ihb_nodes, uint16_t **id_nodes)
+{
+	struct ihb_node *ihb;
+
+	ihb = malloc(sizeof(struct ihb_node));
+	if (!ihb) {
+		fprintf(stderr, BOLDRED"[!] malloc failure:\n"RESET);
+		return -1;
+	}
+
+	/* Save two LSBytes of mcu id */
+	ihb->uid_LSBytes[0] = ((uint16_t)fr.data[6] << 8) | fr.data[7];
+	ihb->expired = false;
+	ihb->canID = fr.can_id;
+	ihb->cnt = 0;
+
+	*ihb_nodes = *ihb_nodes + 1;
+
+	fprintf(stdout, "[*] IHB node=%#x which serial number ends with %#x has been added\n",
+			ihb->canID, ihb->uid_LSBytes[0]);
+
+	/*
+	 * id_nodes is an array of 256 uint16_t which:
+	 *
+	 * 1. Use canID as index because 1<canID<255
+	 * 2. Contain the uid_LSBytes of canID
+	 */
+	if (!id_nodes[ihb->canID])
+		id_nodes[ihb->canID] = &(ihb->uid_LSBytes[0]);
+	else {
+		fprintf(stdout, BOLDCYAN"[@] Bug: try to save %#x, but it taken by %#x\n"RESET,
+				ihb->uid_LSBytes[0], *id_nodes[ihb->canID]);
+		free(ihb);
+		return -1;
+	}
+
+	*out = ihb;
+	return 0;
+}
+
+static void print_raw_frame(struct can_frame fr)
+{
+	fprintf(stdout, "id = %#x  dlc = [%d], data = ", fr.can_id, fr.can_dlc);
+		for (int i = 0; i < fr.can_dlc; i++)
+				printf("%02x", fr.data[i]);
+		printf("\n");
+
+}
+
+int ihb_discovery(int fd, uint8_t *wanna_be_master, uint8_t *ihb_nodes, uint16_t **id_nodes, bool verbose)
 {
 	struct timeval timeout_config = { 10, 0 };
 	struct can_frame frame_rd;
 	struct ihb_node *ihb;
 	ssize_t recv_bytes = 0;
 	bool discovery = true;
+	uint16_t cur_uid;
 	fd_set rdfs;
-	int r, i;
+	int r = -1;
 
 
 	while (discovery && running) {
@@ -219,58 +296,40 @@ int ihb_discovery(int fd, bool v, uint8_t *wanna_be_master, uint8_t *ihb_nodes)
 				continue;
 			}
 
-			if(v) {
-				fprintf(stdout, "id = %#x  dlc = [%d], data = ",
-						frame_rd.can_id,
-						frame_rd.can_dlc);
-				for (i = 0; i < frame_rd.can_dlc; i++)
-					printf("%02x", frame_rd.data[i]);
-				printf("\n");
-			}
+			if(verbose)
+				print_raw_frame(frame_rd);
 
 			if (memcmp(frame_rd.data, IHBMAGIC, 6) == 0 &&
 				   frame_rd.can_dlc == 8) {
 
+				cur_uid = ((uint16_t)frame_rd.data[6] << 8) |
+					  frame_rd.data[7];
 				ihb = find_canID(frame_rd.can_id);
+
 				if (!ihb) {
-
-					ihb = malloc(sizeof(struct ihb_node));
-					if (ihb == NULL) {
-						fprintf(stderr, BOLDRED"[!] malloc failure:\n"RESET);
+					/* New IHB node with a new can ID */
+					r = ihb_add_new_node(&ihb, frame_rd, ihb_nodes, id_nodes);
+					if (r < 0) {
 						discovery = false;
-						return -1;
+						break;
 					}
-
-					/*
-					 * Save two last bytes which contains
-					 * the LSBytes of mcu id.
-					 */
-					ihb->uid_LSBytes[0] = frame_rd.data[6];
-					ihb->uid_LSBytes[1] = frame_rd.data[7];
-
-					ihb->expired = false;
-					ihb->canID = frame_rd.can_id;
-
 					HASH_ADD_INT(ihbs, canID, ihb);
-
-					fprintf(stdout, "[*] IHB node=%#x has been added\n",
-							ihb->canID);
-
-					*ihb_nodes = *ihb_nodes + 1;
+				} else {
+					/* New IHB node with the same can ID */
+					ihb_canID_collision(ihb, cur_uid, frame_rd.can_id);
 				}
 
 				if (frame_rd.can_id <= *wanna_be_master)
 					*wanna_be_master = frame_rd.can_id;
 			}
 
-			
 		} else {
 			discovery = false;
-			continue;
+			break;
 		}
 	}
 
-	return 0;
+	return r;
 }
 
 int ihb_init_socket_can(int *can_soc_fd, const char *d)
