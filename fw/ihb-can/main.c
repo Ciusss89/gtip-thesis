@@ -36,7 +36,7 @@
 /* ASCII message "IHB-ID" : ihb discovery message sent on CAN bus */
 static const unsigned char mgc[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0};
 /* ASCII message "IHB-" : receive new address by ihbtool, runtime fix */
-static const unsigned char add_fix[] = {0x49, 0x48, 0x42, 0x2D, 0};
+static unsigned char add_fix[8] = {0x49, 0x48, 0x42, 0x2D, 0x0, 0x0, 0x3D, 0x0};
 /* ASCII message "IHB-WKUP" : switch the node in notify state */
 static const unsigned char wkup[] = {0x49, 0x48, 0x42, 0x2D, 0x57, 0x4B, 0x55, 0x50, 0};
 /* ASCII message "IHB-MSTR" : switch the node in action state */
@@ -113,6 +113,18 @@ static bool _raw_init(conn_can_raw_t *socket,
 	return true;
 }
 
+static void print_raw_frame(struct can_frame *rcv_frame)
+{
+	if (!ENABLE_DEBUG)
+		return;
+
+	printf("[#] ihbcan: ID=%"PRIu32"  DLC=[%u] DATA=", rcv_frame->can_id,
+							   rcv_frame->can_dlc);
+	for (int i = 0; i < rcv_frame->can_dlc; i++)
+		printf(" %#x", rcv_frame->data[i]);
+	puts("");
+}
+
 static void _raw_frame_analize(struct can_frame *frame)
 {
 	if (state_is(NOTIFY) || state_is(BACKUP)) {
@@ -144,14 +156,17 @@ static void _raw_frame_analize(struct can_frame *frame)
 			 * Fix runtime the addressing, last byte contains the new
 			 * frame identifier which must be used
 			 */
-			if (memcmp(&add_fix, frame->data, 4) == 0) {
-				state_event(RUNT_FIX);
-
+			if (memcmp(&add_fix, frame->data, 7) == 0) {
+				printf("[*] IHB CAN id received, NEW=%#x, OLD=%#x\n",
+						frame->data[7],
+						can->can_frame_id);
 				if (frame->data[4] == LSBytes[0] &&
 				    frame->data[5] == LSBytes[1])
-					can->can_frame_id = frame->data[8];
+					can->can_frame_id = frame->data[7];
+				state_event(RUNT_FIX);
 				return;
 			}
+
 		}
 
 	} else if (state_is(IDLE)) {
@@ -260,14 +275,7 @@ try_again:
 		while (((r = conn_can_raw_recv(&conn, rcv_frame, RCV_TIMEOUT))
 			 == sizeof(struct can_frame))) {
 
-			if (ENABLE_DEBUG) {
-				printf("[#] ihbcan: ID=%"PRIu32"  DLC=[%u] DATA=",
-						rcv_frame->can_id,
-						rcv_frame->can_dlc);
-				for (int i = 0; i < rcv_frame->can_dlc; i++)
-					printf(" %#x", rcv_frame->data[i]);
-				puts("");
-			}
+			print_raw_frame(rcv_frame);
 
 			if (rcv_frame->can_dlc == 8)
 				_raw_frame_analize(rcv_frame);
@@ -342,11 +350,17 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	LSBytes[0] = unique_id[0];
 	LSBytes[1] = unique_id[1];
 
+	add_fix[4] = unique_id[0];
+	add_fix[5] = unique_id[1];
+
 	/*
 	 * Generate an Unique CAN ID from the MCU's unique ID
 	 * the fletcher8 hash function returns a not null value
 	 */
 	can->can_frame_id = fletcher8(unique_id, MAX_MCU_ID_LEN);
+#if defined(IHB_FORCE_CAN_ID)
+	can->can_frame_id = IHB_FORCE_CAN_ID;
+#endif
 	DEBUG("[*] CAN ID=%d\n", can->can_frame_id);
 
 	if( _scan_for_controller(can) != 0) {

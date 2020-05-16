@@ -169,9 +169,10 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 
 			free(cmd);
 
-			fprintf(stdout, "[*] Configuring the IHB node=%#x %s\n",
+			fprintf(stdout, "[*] Configuring the IHB node=%#x which ends whit %#x %s\n",
 					ihb->canID,
-					ihb->best ? "as MASTER" : "as FALLBACK");
+					ihb->
+					ihb->best ? "as ACTIVE" : "as BACKUP");
 		}
 	}
 
