@@ -21,6 +21,8 @@ const char *msg_wkup = "4948422D574B5550";
 const char *msg_mstr = "4948422D4D535452";
 /* ASCII message "IHB-BCKP" : switch the node in backup state */
 const char *msg_bckp = "4948422D42434B50";
+/* ASCII message "IHB-" : receive new address by ihbtool, runtime fix */
+const char *msg_add_fix = "4948422D";
 
 /**
  * struct skin_node - represent the collected data that is incoming by skin nodes

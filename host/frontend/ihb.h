@@ -81,7 +81,23 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d);
  *
  * Returns 0 in case of success, num < 0 othrewise.
  */
-int ihb_discovery(int fd, uint8_t *wanna_be_master, uint8_t *ihb_nodes, uint16_t **array, bool v);
+int ihb_discovery(int fd, uint8_t *wanna_be_master, uint8_t *ihb_nodes, uint16_t **array, bool *try_again, bool v);
+
+/*
+ * @ihb_runtime_fix_collision() - fix IHB nodes which have an can ID collision.
+ *
+ * @fd: can raw socket
+ * @array: input array used to track the CAN ID
+ *
+ * If an IHB nodes has can ID collision this node must be receive a
+ * configuration message that assing to it a new (free) can ID.
+ *
+ * The ihb_runtime_fix_collision adds all IHB nodes that have been fixed to ihbs
+ * pointer.
+ *
+ * Returns 0 in case of success, num < 0 othrewise.
+ */
+int ihb_runtime_fix_collision(int fd, uint16_t **array);
 
 /*
  * @ihb_rcv_data: - receive the isotp data by ihb

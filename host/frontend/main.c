@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 	char *perph = NULL;
 	int c, r = 0;
 	void *data = NULL;
+	bool tryagain = false;
 
 	running = true;
 
@@ -103,11 +104,27 @@ int main(int argc, char **argv)
 	r = ihbs_wakeup(can_soc_raw);
 	if (r < 0)
 		goto _fail1;
-
+try_again:
 	/* Start discovery of the nodes */
-	r = ihb_discovery(can_soc_raw, &master_id, &ihb_nodes, id_nodes, verbose);
+	r = ihb_discovery(can_soc_raw, &master_id, &ihb_nodes, id_nodes, &tryagain, verbose);
 	if (r < 0)
 		goto _fail1;
+
+	if (tryagain) {
+		/* Fix IHB nodes which have an can ID collision */
+		r = ihb_runtime_fix_collision(can_soc_raw, id_nodes);
+		if (r < 0)
+			goto _fail1;
+
+		fprintf(stdout, "\n[*] All collision has been fixed. Start again discovery\n");
+
+		memset(id_nodes, 0, 255 * sizeof(*id_nodes));
+		HASH_CLEAR(hh,ihbs);
+		tryagain = false;
+		master_id = 255;
+		ihb_nodes = 0;
+		goto try_again;
+	}
 
 	if(ihb_nodes != 0) {
 		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
