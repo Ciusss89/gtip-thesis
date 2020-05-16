@@ -28,8 +28,8 @@ struct ihb_node {
 	/* Data */
 	uint16_t uid_LSBytes[256];
 	uint8_t cnt;
-	bool best, expired;
-	char *canP;
+	bool expired;
+	bool best;
 	int canID;
 
 	/* makes this structure hashable */
