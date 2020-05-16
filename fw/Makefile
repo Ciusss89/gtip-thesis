@@ -4,7 +4,7 @@ APPLICATION = IHB.GTip
 
 ## Target
 #
-BOARD ?= nucleo-l476rg
+BOARD ?= native #nucleo-l476rg
 
 ## This has to be the absolute path to the RIOT base directory:
 #
@@ -38,6 +38,10 @@ CFLAGS += -DISOTP_RX_PORT=0x708
 #
 CFLAGS += -DIHBTOLL_FRAME_ID=0x100
 
+## IHBCAN: Force the IHB node to use a custom CAN ID
+#
+#CFLAGS += -DIHB_FORCE_CAN_ID=0x22
+
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
@@ -53,8 +57,8 @@ USEMODULE += can_pm
 USEMODULE += xtimer
 USEMODULE += random
 
-FEATURES_REQUIRED += periph_can
-FEATURES_REQUIRED += periph_gpio_irq
+#FEATURES_REQUIRED += periph_can
+#FEATURES_REQUIRED += periph_gpio_irq
 
 ## Custom modules
 #
