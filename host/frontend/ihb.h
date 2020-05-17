@@ -65,39 +65,47 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d);
  * @ihb_discovery: - discovery online IHB nodes
  *
  * @fd: can raw socket
- * @wanna_be_master: CAN ID of the current best IHB node
- * @ihb_nodes: amount of all IHB nodes which has been discovered
- * @array: input array used to track the CAN ID
- * @v: if true enable verbose
+ * @best: CAN ID of the current best IHB node
+ * @ihbs_cnt: amount of nodes which has been discovered
+ * @ssigned_canID: input array used to track the CAN ID
+ * @try_again: becomes true when a CAN ID collision is discovered
+ * @verbose: if true enable verbose
  *
  * ihb_discovery listens the raw frame which are incoming on CAN bus. If a frame
  * is valid the struct ihb_node will be filled with IHB's info like the CAN ID
  * frame and the two last bytes of MCU id.
  *
  * For each node which has been discoverd:
- *   - increse the counter of @ihb_nodes.
- *   - sign as taken the CAN ID frame into @array
- *   - save lowest CAN ID frame into @wanna_be_master
+ *   - increse the counter of @ihbs_cnt.
+ *   - sign as taken the CAN ID frame into @assigned_canID.
+ *   - save lowest CAN ID frame into @best
+ *   - save the two last bytes of MCU id into uid_LSBytes[0]
+ *
+ * When a collision happens:
+ *   - set true the try_again.
+ *   - save the two last bytes of MCU id into uid_LSBytes[i > 0]
  *
  * Returns 0 in case of success, num < 0 othrewise.
  */
-int ihb_discovery(int fd, uint8_t *wanna_be_master, uint8_t *ihb_nodes, uint16_t **array, bool *try_again, bool v);
+int ihb_discovery(int fd, uint8_t *best, uint8_t *ihbs_cnt,
+		  bool *assigned_canID, bool *try_again, bool verbose);
 
 /*
  * @ihb_runtime_fix_collision() - fix IHB nodes which have an can ID collision.
  *
  * @fd: can raw socket
- * @array: input array used to track the CAN ID
+ * @assigned_canID: input array used to track the CAN ID
  *
- * If an IHB nodes has can ID collision this node must be receive a
- * configuration message that assing to it a new (free) can ID.
+ * Function is excuted only if try_again is true;
+ * In this case all IHB nodes which are reported into uid_LSBytes[i > 0]
+ * will receive a configuration message with the a new CAN ID.
  *
- * The ihb_runtime_fix_collision adds all IHB nodes that have been fixed to ihbs
- * pointer.
+ * As last step the function clean realse memory alloceted to store struct ihb_node
+ * and reset to false all assigned_canID
  *
  * Returns 0 in case of success, num < 0 othrewise.
  */
-int ihb_runtime_fix_collision(int fd, uint16_t **array);
+int ihb_runtime_fix_collision(int fd, bool *assigned_canID);
 
 /*
  * @ihb_rcv_data: - receive the isotp data by ihb

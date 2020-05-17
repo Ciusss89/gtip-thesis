@@ -49,8 +49,8 @@ int main(int argc, char **argv)
 {
 	bool verbose = false, isotp_fails = false, perf = false;
 	int can_soc_raw = 0, can_soc_isotp = 0;
-	uint8_t master_id = 255, ihb_nodes = 0;
-	uint16_t *id_nodes[255] = {NULL};
+	uint8_t master_id = 255, ihbs_cnt = 0;
+	bool assigned_canID[255] = {false};
 	char *perph = NULL;
 	int c, r = 0;
 	void *data = NULL;
@@ -106,29 +106,30 @@ int main(int argc, char **argv)
 		goto _fail1;
 try_again:
 	/* Start discovery of the nodes */
-	r = ihb_discovery(can_soc_raw, &master_id, &ihb_nodes, id_nodes, &tryagain, verbose);
+	r = ihb_discovery(can_soc_raw, &master_id, &ihbs_cnt, assigned_canID, &tryagain, verbose);
 	if (r < 0)
 		goto _fail1;
 
 	if (tryagain) {
 		/* Fix IHB nodes which have an can ID collision */
-		r = ihb_runtime_fix_collision(can_soc_raw, id_nodes);
+		r = ihb_runtime_fix_collision(can_soc_raw, assigned_canID);
 		if (r < 0)
 			goto _fail1;
 
-		fprintf(stdout, "\n[*] All collision has been fixed. Start again discovery\n");
+		fprintf(stdout, BOLDCYAN"[*] Start again discovery\n\n"RESET);
 
-		memset(id_nodes, 0, 255 * sizeof(*id_nodes));
 		HASH_CLEAR(hh,ihbs);
 		tryagain = false;
 		master_id = 255;
-		ihb_nodes = 0;
+		ihbs_cnt = 0;
+		free(ihbs);
+		ihbs = NULL;
 		goto try_again;
 	}
 
-	if(ihb_nodes != 0) {
+	if(ihbs_cnt != 0) {
 		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
-				ihb_nodes, master_id);
+				ihbs_cnt, master_id);
 	} else {
 		fprintf(stderr, BOLDRED"[!] There are not IHBs available\n"RESET);
 		goto _fail1;
@@ -149,9 +150,9 @@ try_again:
 		 * obtains an ID from the MCU's unique ID.
 		 *
 		 * The next code path is executed when the ihbtool has discovered
-		 * the IHBs nodes. The ihb_nodes counts the IHB.
+		 * the IHBs nodes. The ihbs_cnt counts the IHB.
 		 */
-		if(ihb_nodes > 0) {
+		if(ihbs_cnt > 0) {
 
 			/* Open and inizializate the socket CAN ISO-TP */
 			r = ihb_init_socket_can_isotp(&can_soc_isotp, perph);
@@ -173,10 +174,10 @@ try_again:
 				close(can_soc_isotp);
 
 				isotp_fails = true;
-				ihb_nodes--;
+				ihbs_cnt--;
 
 				/* If it was the last exit */
-				if(ihb_nodes == 0) {
+				if(ihbs_cnt == 0) {
 					fprintf(stdout, "[*] IHB node=%#x has expired\n",
 							master_id);
 					fprintf(stdout, "[*] There are not IHBs available\n");
@@ -209,7 +210,7 @@ try_again:
 
 		isotp_fails = false;
 		fprintf(stdout, "\n[*] Network size %d. IHB master candidate = %#x\n",
-				ihb_nodes, master_id);
+				ihbs_cnt, master_id);
 
 		/* Start the setup of the nodes */
 		r = ihb_setup(can_soc_raw, master_id, verbose);
@@ -228,6 +229,7 @@ _fail1:
 	close(can_soc_raw);
 
 	HASH_CLEAR(hh,ihbs);
+	free(ihbs);
 
 _fail0:
 	return r;
