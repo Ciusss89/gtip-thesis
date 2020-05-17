@@ -16,6 +16,8 @@
 
 #include "ihb.h"
 
+static bool running;
+
 void help(char *prg)
 {
 	fprintf(stdout, "\nUsage: %s [options] -d CAN interface\n", prg);
@@ -53,7 +55,6 @@ int main(int argc, char **argv)
 	bool assigned_canID[255] = {false};
 	char *perph = NULL;
 	int c, r = 0;
-	void *data = NULL;
 	bool tryagain = false;
 
 	running = true;
@@ -106,7 +107,8 @@ int main(int argc, char **argv)
 		goto _fail1;
 try_again:
 	/* Start discovery of the nodes */
-	r = ihb_discovery(can_soc_raw, &master_id, &ihbs_cnt, assigned_canID, &tryagain, verbose);
+	r = ihb_discovery(can_soc_raw, &master_id, &ihbs_cnt, assigned_canID,
+			&tryagain, verbose, running);
 	if (r < 0)
 		goto _fail1;
 
@@ -118,12 +120,10 @@ try_again:
 
 		fprintf(stdout, BOLDCYAN"[*] Start again discovery\n\n"RESET);
 
-		HASH_CLEAR(hh,ihbs);
 		tryagain = false;
 		master_id = 255;
 		ihbs_cnt = 0;
-		free(ihbs);
-		ihbs = NULL;
+		ihbs_cleanup();
 		goto try_again;
 	}
 
@@ -161,7 +161,7 @@ try_again:
 			}
 
 			/* Stat the IHB data acquisition */
-			r = ihb_rcv_data(can_soc_isotp, &data, verbose, perf);
+			r = ihb_rcv_data(can_soc_isotp, verbose, perf, running);
 
 			/*
 			 * If the IHB goes in timeout, it has passed away...
@@ -218,9 +218,6 @@ try_again:
 			break;
 	}
 
-	if(data)
-		free(data);
-
 	shutdown(can_soc_isotp, 2);
 	close(can_soc_isotp);
 
@@ -228,8 +225,7 @@ _fail1:
 	shutdown(can_soc_raw, 2);
 	close(can_soc_raw);
 
-	HASH_CLEAR(hh,ihbs);
-	free(ihbs);
+	ihbs_cleanup();
 
 _fail0:
 	return r;

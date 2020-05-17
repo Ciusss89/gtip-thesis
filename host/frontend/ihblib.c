@@ -34,6 +34,8 @@
 
 #define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
 
+struct ihb_node *ihbs = NULL;
+
 static struct ihb_node *find_canID(int can_id) {
 	struct ihb_node *s;
 
@@ -41,12 +43,18 @@ static struct ihb_node *find_canID(int can_id) {
 	return s;
 }
 
+void ihbs_cleanup()
+{
+	HASH_CLEAR(hh,ihbs);
+	free(ihbs);
+	ihbs = NULL;
+}
 
 static int send_msg(int fd, char *msg)
 {
 	struct canfd_frame frame;
 	int required_mtu = -1;
-	int attemp = 100;
+	int attemp = 10;
 
 	/*
 	 * Parse CAN frame
@@ -64,7 +72,7 @@ static int send_msg(int fd, char *msg)
 			return -1;
 		}
 		attemp--;
-		usleep(20);
+		usleep(200);
 		
 		/*  TODO: should be sent until IHB doesn't send me ack */
 	}
@@ -348,7 +356,8 @@ static void print_raw_frame(struct can_frame fr)
 }
 
 int ihb_discovery(int fd, uint8_t *best, uint8_t *ihbs_cnt,
-		  bool *assigned_canID, bool *try_again, bool verbose)
+		  bool *assigned_canID, bool *try_again,
+		  bool verbose, bool running)
 {
 	struct timeval timeout_config = { 15, 0 };
 	struct can_frame frame_rd;
@@ -649,7 +658,7 @@ static void ihb_sk_notify_fails(struct skin_node *sk_nodes, size_t sk, bool *sk_
 	return;
 }
 
-int ihb_rcv_data(int fd, void **ptr, bool verbose, bool perf)
+int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 {
 	const size_t info_size = sizeof(struct ihb_node_info);
 	static struct ihb_node_info *ihb_node = NULL;
