@@ -41,6 +41,37 @@ static struct ihb_node *find_canID(int can_id) {
 	return s;
 }
 
+
+static int send_msg(int fd, char *msg)
+{
+	struct canfd_frame frame;
+	int required_mtu = -1;
+	int attemp = 100;
+
+	/*
+	 * Parse CAN frame
+	 *
+	 * Transfers a valid ASCII string describing a CAN frame
+	 * into struct canfd_frame
+	 */
+	required_mtu = parse_canframe(msg, &frame);
+
+	/* Send the msg each 20ms for 50 times */
+	while(attemp > 0) {
+		/* send frame */
+		if (write(fd, &frame, required_mtu) != required_mtu) {
+			fprintf(stderr, BOLDRED"[!] write fails\n"RESET);
+			return -1;
+		}
+		attemp--;
+		usleep(20);
+		
+		/*  TODO: should be sent until IHB doesn't send me ack */
+	}
+
+	return 0;
+}
+
 int ihb_blacklist_node(uint8_t ihb_expired, bool v)
 {
 	struct ihb_node *ihb;
@@ -99,11 +130,8 @@ int ihb_discovery_newone(uint8_t *master_id, bool v)
 
 int ihbs_wakeup(int s)
 {
-	int r = -1, required_mtu = -1;
-	struct canfd_frame frame;
 	char *cmd;
-
-	frame.len = 8;
+	int r;
 
 	r = asprintf(&cmd, "%03x#%s", IHBTOLL_FRAME_ID, msg_wkup);
 	if (r < 0) {
@@ -111,23 +139,19 @@ int ihbs_wakeup(int s)
 		return -1;
 	}
 
-	required_mtu = parse_canframe(cmd, &frame);
-
-	/* send frame */
-	if (write(s, &frame, required_mtu) != required_mtu)
-		r = -1;
+	if (send_msg(s, cmd) < 0) {
+		free(cmd);
+		return -1;
+	}
 
 	free(cmd);
-
-	return r;
+	return 0;
 }
 
 int ihb_setup(int s, uint8_t c_id_master, bool v)
 {
-	struct canfd_frame frame;
 	struct ihb_node *ihb;
-
-	int r = -1, required_mtu = -1;
+	int r = -1;
 	char *cmd;
 
 	for(ihb = ihbs; ihb != NULL; ihb = (struct ihb_node *)(ihb->hh.next)) {
@@ -150,24 +174,11 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 				ihb->best = false;
 			}
 
-			/* ASCII message are both 8 bytes length */
-			frame.len = 8;
-
-			/*
-			 * Parse CAN frame
-			 *
-			 * Transfers a valid ASCII string describing a CAN frame
-			 * into struct canfd_frame
-			 */
-			required_mtu = parse_canframe(cmd, &frame);
-
-			/* send frame */
-			if (write(s, &frame, required_mtu) != required_mtu) {
-				r = -1;
+			r = send_msg(s, cmd);
+			if (r < 0) {
 				free(cmd);
 				break;
 			}
-
 			free(cmd);
 
 			fprintf(stdout, "[*] Configuring the IHB node=%#x which ends whit %#x %s\n",
@@ -184,7 +195,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 
 static uint8_t ihb_get_new_can_id(bool *assigned_canID)
 {
-	uint8_t i = 255;
+	uint8_t i = 254;
 
 	for(; i > 0; i--) {
 		/* IF false, the CAN ID is free */
@@ -208,17 +219,18 @@ static void ihbs_clean(bool *assigned_canID)
 		HASH_DEL(ihbs, ihb);
 	}
 
-	for (; i <= 255; i++)
+	for (; i < 255; i++)
 		assigned_canID[i] = false;
+
+	return;
 }
 
 int ihb_runtime_fix_collision(int fd, bool *assigned_canID)
 {
-	int r =0, required_mtu = -1;
-	struct canfd_frame frame;
 	struct ihb_node *ihb;
 	uint8_t new_canID;
 	char *cmd;
+	int r = 0;
 
 	/* For each IHB CAN id*/
 	for(ihb = ihbs; ihb != NULL && r >= 0; ihb = (struct ihb_node *)(ihb->hh.next)) {
@@ -246,27 +258,16 @@ int ihb_runtime_fix_collision(int fd, bool *assigned_canID)
 			fprintf(stdout, CYAN"[*] Add IHB=%#x which ends with %#x will use %#x\n"RESET,
 				ihb->canID, ihb->uid_LSBytes[ihb->cnt], new_canID);
 
-			frame.len = 8;
-			required_mtu = parse_canframe(cmd, &frame);
-
-			/* send frame */
-			if (write(fd, &frame, required_mtu) != required_mtu) {
-				fprintf(stderr, BOLDRED"[!] write fails\n"RESET);
+			if (send_msg(fd, cmd) < 0) {
 				free(cmd);
 				r = -1;
 				break;
 			}
-
-			if(cmd) {
-				free(cmd);
-				cmd = NULL;
-			}
-			usleep(20);
+			free(cmd);
 		}
 	}
-
+	
 	ihbs_clean(assigned_canID);
-
 	return r;
 }
 
@@ -349,7 +350,7 @@ static void print_raw_frame(struct can_frame fr)
 int ihb_discovery(int fd, uint8_t *best, uint8_t *ihbs_cnt,
 		  bool *assigned_canID, bool *try_again, bool verbose)
 {
-	struct timeval timeout_config = { 30, 0 };
+	struct timeval timeout_config = { 15, 0 };
 	struct can_frame frame_rd;
 	struct ihb_node *ihb;
 	ssize_t recv_bytes = 0;
@@ -414,11 +415,7 @@ int ihb_discovery(int fd, uint8_t *best, uint8_t *ihbs_cnt,
 					ihb_canID_collision(ihb, cur_uid, frame_rd.can_id, try_again);
 				}
 
-				/*
-				 * The master candide must be update only when
-				 * try_again is false
-				 */
-				if ((frame_rd.can_id <= *best) && !try_again)
+				if (frame_rd.can_id <= *best)
 					*best = frame_rd.can_id;
 			}
 
