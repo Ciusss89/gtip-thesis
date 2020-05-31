@@ -78,14 +78,14 @@ struct ihb_can_ctx {
 /* FILE: ihb-can/main.c */
 
 /*
- * @ihb_can_module_info: print ihb_can_ctx struct contens
+ * ihb_can_module_info() - print ihb_can_ctx struct contens
  *
  * @ctx: pointer of struct ihb_can_ctx
  */
 void ihb_can_module_info(struct ihb_can_ctx *ctx);
 
 /*
- * @ihb_can_init: inizialize the CAN module.
+ * ihb_can_init() - inizialize the CAN module.
  *
  * @ctx: pointer of struct ihb_ctx
  * @_data_source: pid of process which generates payload
@@ -99,15 +99,15 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source);
 /* FILE: ihb-can/sender.c */
 
 /*
- * @ihb_isotp_close: close the isotp connnection and sets can_isotp_ready to
- *                   false.
+ * ihb_isotp_close() - close the isotp connnection and sets can_isotp_ready to
+ * 		       false.
  *
  * It returns 0 in case of success.
  */
 int ihb_isotp_close(void);
 
 /*
- * @ihb_isotp_init: create a isotp socket and bind it
+ * ihb_isotp_init() - create a isotp socket and bind it
  *
  * @can_num: peripheral identifier of the MCU's CAN controller
  * @conn_timeout: timeout for ISO TP transmissions
@@ -118,10 +118,10 @@ int ihb_isotp_close(void);
 int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready);
 
 /*
- * @ihb_isotp_send_chunks: send chunks of data by iso-tp protocol. Function makes
- *                         a copy of in_data and sends it.
+ * ihb_isotp_send_chunks() - send chunks of data by iso-tp protocol. Function makes
+ *                           a copy of in_data and sends it.
  *
- * @in_data: pinter of the data which have to send
+ * @in_data: pointer of the data which have to send
  * @data_bs: data block size
  * @count: count of data_bs which have to send
  *
@@ -133,19 +133,19 @@ int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t count);
 /* FILE: ihb-can/fsm.c */
 
 /*
- * @state_init: initialize the finite state machine to IDLE
+ * state_init() - initialize the finite state machine to IDLE
  */
 void state_init(void);
 
 /*
- * @state_event: skip towards next state in relation to current state and event
+ * state_event() - skip towards next state in relation to current state and event
  *
  * @evnt: event type
  */
 void state_event(fsm_event_t evnt);
 
 /*
- * @state_is: test the current state
+ * state_is() - test the current state
  *
  * @in_states: the state which to have check
  *
@@ -154,9 +154,10 @@ void state_event(fsm_event_t evnt);
 bool state_is(fsm_state_t in_states);
 
 /*
- * @state_print: returns into about current state
+ * state_print() - returns into about current state
  *
  * Return a pointer which contains the name of current state.
  */
 char *state_print(void);
+
 #endif
