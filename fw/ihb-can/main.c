@@ -129,44 +129,36 @@ static void _raw_frame_analize(struct can_frame *frame)
 {
 	if (state_is(NOTIFY) || state_is(BACKUP)) {
 
+		/* Is it master ? */
+		if (memcmp(&mstr, frame->data, frame->can_dlc) == 0) {
+			state_event(MASTER);
+			return;
+		}
+
+		/* Is it slave ? */
+		if (memcmp(&bckp, frame->data, frame->can_dlc) == 0) {
+			state_event(SLAVE);
+			return;
+		}
+
 		/*
-		 * IHBTOOL to confiure an IHB must send a message which matches
-		 * its can frame id
+		 *                      ┌ New CAN frame id
+		 * ASCI Message: IHB-XX=Y
+		 *                   ||
+		 *        LSBytes[0] ┘└ LSBytes[1]
+		 *
+		 * Fix runtime the addressing, last byte contains the new
+		 * frame identifier which must be used
 		 */
-		if(frame->can_id == can->can_frame_id) {
-
-			/* Is it master ? */
-			if (memcmp(&mstr, frame->data, frame->can_dlc) == 0) {
-				state_event(MASTER);
-				return;
-			}
-
-			/* Is it slave ? */
-			if (memcmp(&bckp, frame->data, frame->can_dlc) == 0) {
-				state_event(SLAVE);
-				return;
-			}
-
-			/*
-			 *                      ┌ New CAN frame id
-			 * ASCI Message: IHB-XX=Y
-			 *                   ||
-			 *        LSBytes[0] ┘└ LSBytes[1]
-			 *
-			 * Fix runtime the addressing, last byte contains the new
-			 * frame identifier which must be used
-			 */
-			if (memcmp(&add_fix, frame->data, 7) == 0) {
-				printf("[*] IHB CAN id received, NEW=%#x, OLD=%#x\n",
-						frame->data[7],
-						can->can_frame_id);
-				if (frame->data[4] == LSBytes[0] &&
-				    frame->data[5] == LSBytes[1])
-					can->can_frame_id = frame->data[7];
-				state_event(RUNT_FIX);
-				return;
-			}
-
+		if (memcmp(&add_fix, frame->data, 7) == 0) {
+			printf("[*] IHB CAN id received, NEW=%#x, OLD=%#x\n",
+					frame->data[7],
+					can->can_frame_id);
+			if (frame->data[4] == LSBytes[0] &&
+			    frame->data[5] == LSBytes[1])
+				can->can_frame_id = frame->data[7];
+			state_event(RUNT_FIX);
+			return;
 		}
 
 	} else if (state_is(IDLE)) {
