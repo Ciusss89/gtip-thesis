@@ -53,7 +53,7 @@ USEMODULE += ps
 USEMODULE += auto_init_can
 USEMODULE += can_isotp
 USEMODULE += conn_can
-USEMODULE += can_pm
+
 USEMODULE += xtimer
 USEMODULE += random
 

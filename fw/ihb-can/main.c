@@ -11,9 +11,9 @@
 #include <string.h>
 
 /* RIOT APIs */
-#include "shell.h"
-#include "board.h"
 #include "thread.h"
+#include "xtimer.h"
+#include "board.h"
 #include "msg.h"
 
 /* RIOT APIs */
