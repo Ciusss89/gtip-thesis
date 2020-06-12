@@ -63,9 +63,6 @@ USEMODULE += random
 ## Custom modules
 #
 
-USEMODULE += uptime
-DIRS += $(CURDIR)/uptime
-
 USEMODULE += ihbcan
 DIRS += $(CURDIR)/ihb-can
 

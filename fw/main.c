@@ -12,11 +12,6 @@
 #include "board.h"
 #include "thread.h"
 
-/* custom usermodules */
-#ifdef MODULE_UPTIME
-#include "uptime/uptime.h"
-#endif
-
 #ifdef MODULE_IHBNETSIM
 #include "ihb-netsim/skin.h"
 char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
@@ -63,9 +58,6 @@ static int ihb_struct_list(__attribute__((unused)) int argc,
 
 /* Add custom tool to system shell */
 static const shell_command_t shell_commands[] = {
-#ifdef MODULE_UPTIME
-	{ "uptime", UPTIME_THREAD_HELP, _uptime_handler},
-#endif
 #ifdef MODULE_IHBNETSIM
 	{ "skin", SK_USERSPACE_HELP, skin_node_handler},
 #endif
