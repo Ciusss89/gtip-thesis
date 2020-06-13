@@ -18,6 +18,7 @@ static fsm_table_t transition[] = {
 	{NOTIFY, SLAVE, BACKUP},
 	{NOTIFY, RUNT_FIX, TOFIX},
 	{BACKUP, MASTER, ACTIVE},
+	{BACKUP, SLAVE, BACKUP},
 	{TOFIX, FIXED, NOTIFY},
 	{ACTIVE, FAIL, ERR}
 };
@@ -33,6 +34,8 @@ void state_event(fsm_event_t evnt)
 		}
 	}
 
+	/* This never should happen */
+	puts("[!] IHB transition not allowed, force error status");
 	can_state = ERR;
 }
 
