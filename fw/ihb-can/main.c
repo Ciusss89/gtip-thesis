@@ -175,22 +175,35 @@ static void _raw_frame_analize(struct can_frame *frame)
 	}
 }
 
-static bool _raw_frame_snd(conn_can_raw_t *socket,
-			   struct can_frame *frame,
-			   struct can_filter *filter,
-			   bool init)
+static int _raw_rcv_set_filter(conn_can_raw_t *socket, struct can_filter *filter)
 {
 	int r;
 
-	if(init)
-		goto first_run;
+	if (state_is(IDLE))
+		filter->can_id = IHBTOLL_FRAME_ID;
+	else if (state_is(NOTIFY))
+		filter->can_id = can->can_frame_id;
+
+	/* Set hw filer to receive frame which have my CAN frame ID */
+	r = conn_can_raw_set_filter(socket, filter, 1);
+	if (r < 0) {
+		printf("[!] cannot add the filter to the socket: err=%d", r);
+		return r;
+	}
+
+	return 0;
+}
+
+static int _raw_frame_snd(conn_can_raw_t *socket, struct can_frame *frame)
+{
+	int r;
 
 	/* Remove hw filter */
 	r = conn_can_raw_set_filter(socket, NULL, 0);
 	if (r < 0) {
 		printf("[!] cannot remove filter from socket: err=%d", r);
 		state_event(FAIL);
-		return false;
+		return r;
 	}
 
 	/* Send */
@@ -198,21 +211,10 @@ static bool _raw_frame_snd(conn_can_raw_t *socket,
 	if (r < 0) {
 		printf("[!] error sending the CAN frame: err=%d\n", r);
 		state_event(FAIL);
-		return false;
+		return r;
 	}
 
-first_run:
-	/* Set hw filer to receive frame which have my CAN frame ID */
-	r = conn_can_raw_set_filter(socket, filter, 1);
-	if (r < 0) {
-		printf("[!] cannot add the filter to the socket: err=%d", r);
-		state_event(FAIL);
-		return false;
-	}
-
-	xtimer_usleep(WAIT_100ms);
-
-	return true;
+	return 0;
 }
 
 static void _add_can_info(void)
@@ -227,8 +229,8 @@ static void *_can_fsm_thread(__attribute__((unused)) void *arg)
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
 	struct can_filter *filter = xmalloc(sizeof(struct can_filter));
-	conn_can_raw_t conn;
 	bool first_run = true;
+	conn_can_raw_t conn;
 	int r;
 
 	_add_can_info();
@@ -243,18 +245,24 @@ try_again:
 		goto err;
 
 	do {
-		if (state_is(IDLE))
-			filter->can_id = IHBTOLL_FRAME_ID;
-		else if (state_is(NOTIFY))
-			filter->can_id = can->can_frame_id;
-
 		/*
 		 * The raw frame must be sent until the HOST doesn't configure
 		 * the IHB
 		 */
-		if (state_is(NOTIFY) || first_run) {
-			if (!_raw_frame_snd(&conn, snd_frame, filter, first_run))
+		if (state_is(NOTIFY)) {
+			if (_raw_frame_snd(&conn, snd_frame) < 0)
 				break;
+
+			if(_raw_rcv_set_filter(&conn, filter) < 0)
+				break;
+		}
+
+		/*
+		 * In IDLE state, the _raw_frame_snd is not need then set the
+		 * filter only one time (the first time)
+		 */
+		if (first_run) {
+			_raw_rcv_set_filter(&conn, filter);
 			first_run = false;
 		}
 
