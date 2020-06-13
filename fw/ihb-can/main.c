@@ -132,12 +132,14 @@ static void _raw_frame_analize(struct can_frame *frame)
 		/* Is it master ? */
 		if (memcmp(&mstr, frame->data, frame->can_dlc) == 0) {
 			state_event(MASTER);
+			/* TODO: send ack to ihbtool */
 			return;
 		}
 
 		/* Is it slave ? */
 		if (memcmp(&bckp, frame->data, frame->can_dlc) == 0) {
 			state_event(SLAVE);
+			/* TODO: send ack to ihbtool */
 			return;
 		}
 
@@ -158,6 +160,7 @@ static void _raw_frame_analize(struct can_frame *frame)
 			    frame->data[5] == LSBytes[1])
 				can->can_frame_id = frame->data[7];
 			state_event(RUNT_FIX);
+			/* TODO: send ack to ihbtool */
 			return;
 		}
 
