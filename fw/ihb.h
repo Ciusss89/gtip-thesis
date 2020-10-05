@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-/* RIOT APIs */
-#include "thread.h"
-
 #define ATTR_UNUSED __attribute__((unused))
 
 #define WAIT_2000ms	(2000LU * US_PER_MS)	/* delay of 2s */
@@ -57,7 +54,7 @@ struct ihb_node_info {
 struct ihb_ctx {
 	void *can;
 	void *sk_nodes;
-	kernel_pid_t *pid_ihbnetsim;
+	kernel_pid_t pid_skin_handler;
 	kernel_pid_t pid_can_handler;
 	struct ihb_node_info ihb_info;
 };

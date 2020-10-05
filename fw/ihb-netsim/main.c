@@ -23,6 +23,10 @@
 #include "skin.h"
 #include "ihb.h"
 
+#define SK_THREAD_HELP "ihb-netsim thread"
+
+static char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
+
 #ifdef MODULE_IHBCAN
 #include "ihb-can/can.h"
 static struct ihb_can_ctx *can = NULL;
@@ -62,24 +66,9 @@ int skin_node_handler(int argc, char **argv)
 	return 0;
 }
 
-void *skin_node_sim_thread(void *in)
+void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 {
-	struct ihb_ctx *IHB = (struct ihb_ctx *)in;
-	struct ihb_node_info *info = &IHB->ihb_info;
-	sk = xcalloc(SK_N_S, data_bs);
-
-	IHB->sk_nodes = sk;
-
-	info->skin_nodes = SK_N_S;
-	info->skin_tactails = SK_T_S;
-
 	uint8_t i, j, b;
-
-	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n",
-		SK_N_S, SK_T_S);
-
-	/* Initialize */
-	random_init(13);
 
 	/*
 	 * PAY ATTENTION:
@@ -88,7 +77,7 @@ void *skin_node_sim_thread(void *in)
 	 * while(1) {
 	 * }
 	 */
-	while (1) {
+	while (true) {
 
 		/* Fill the struct ihb_structs with fake data */
 		for(i = 0; i < SK_N_S; i++) {
@@ -118,9 +107,8 @@ void *skin_node_sim_thread(void *in)
 		}
 
 #ifdef MODULE_IHBCAN
-		can = IHB->can;
 		/* To check the isotp_ready flag the struct CAN must be valid */
-		if (can) {
+		if (can) { //needless
 			if(can->can_isotp_ready)
 				ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 			else
@@ -141,8 +129,33 @@ void *skin_node_sim_thread(void *in)
 		 * xtimer_usleep(WAIT_20ms);
 		 */
 	}
+}
 
-	return NULL;
+
+int ihb_init_netsimulator(void *ctx)
+{
+	sk = xcalloc(SK_N_S, data_bs);
+	struct ihb_ctx *IHB = ctx;
+
+	IHB->ihb_info.skin_nodes = SK_N_S;
+	IHB->ihb_info.skin_tactails = SK_T_S;
+	IHB->sk_nodes = sk;
+
+	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n",
+			SK_N_S, SK_T_S);
+
+	/* Initialize speudo_random*/
+	random_init(13);
+
+#ifdef MODULE_IHBCAN
+	can = IHB->can;
+#endif
+	return thread_create(skin_sim_stack,
+				sizeof(skin_sim_stack),
+				THREAD_PRIORITY_MAIN - 1,
+				THREAD_CREATE_SLEEPING,
+				skin_node_sim_thread,
+				NULL, SK_THREAD_HELP);
 }
 
 void ihb_skin_module_info(struct  skin_node *ctx)
