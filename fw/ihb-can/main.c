@@ -390,7 +390,7 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	IHB->can = can;
 
 	/* Get the ihb_info context */
-	info = IHB->ihb_info;
+	info = &IHB->ihb_info;
 
 	/* Get the PID which generates the data to sent */
 	pid_of_data_source = _data_source;

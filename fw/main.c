@@ -29,7 +29,7 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 #include "ihb.h"
 
-static struct ihb_ctx IHB;
+static struct ihb_ctx IHB = {0};
 
 static int ihb_struct_list(ATTR_UNUSED int argc, ATTR_UNUSED char **argv)
 {
@@ -67,14 +67,10 @@ static char line_buf[SHELL_DEFAULT_BUFSIZE];
 
 static void ihb_info_init(void)
 {
-	IHB.ihb_info = xmalloc(sizeof(struct ihb_node_info));
-
-	memset(IHB.ihb_info, 0, sizeof(struct ihb_node_info));
-
-	strncpy(IHB.ihb_info->mcu_arch, RIOT_MCU, strlen(RIOT_MCU) + 1);
-	strncpy(IHB.ihb_info->mcu_board, RIOT_BOARD, strlen(RIOT_BOARD) + 1);
-	strncpy(IHB.ihb_info->riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION) + 1);
-	strncpy(IHB.ihb_info->ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER) + 1);
+	strncpy(IHB.ihb_info.mcu_arch, RIOT_MCU, strlen(RIOT_MCU) + 1);
+	strncpy(IHB.ihb_info.mcu_board, RIOT_BOARD, strlen(RIOT_BOARD) + 1);
+	strncpy(IHB.ihb_info.riotos_ver, RIOT_VERSION, strlen(RIOT_VERSION) + 1);
+	strncpy(IHB.ihb_info.ihb_fw_rev, IHB_FW_VER, strlen(IHB_FW_VER) + 1);
 }
 
 /**
@@ -85,8 +81,6 @@ static void ihb_info_init(void)
 static int ihb_init(void)
 {
 	kernel_pid_t pid_data_gen = -1;
-
-	memset(&IHB, 0, sizeof(struct ihb_ctx));
 
 	ihb_info_init();
 

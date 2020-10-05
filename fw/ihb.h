@@ -20,23 +20,6 @@
 #define MAX_INFO_LENGHT (31)
 
 /**
- * struct ihb_ctx - it's a containter of ihb data, info and other stuff.
- *
- * @can: pointer of struc ihb_can_ctx
- * @sk_nodes: pointer of struct skin_node
- * @pid_ihbnetsim: pointer of skin_node_sim_thread pid
- * @pid_can_handler: can handler thread pid
- * @ihb_info: pointer of struc ihb_node_info
- */
-struct ihb_ctx {
-	void *can;
-	void *sk_nodes;
-	kernel_pid_t *pid_ihbnetsim;
-	kernel_pid_t pid_can_handler;
-	struct ihb_node_info *ihb_info;
-};
-
-/**
  * struct ihb_node_info - contains the info of IHB node which are sent to HOST
  *
  * @mcu_uid: MCU's unique ID
@@ -61,4 +44,22 @@ struct ihb_node_info {
 
 	uint8_t isotp_timeo;
 };
+
+/**
+ * struct ihb_ctx - it's a containter of ihb data, info and other stuff.
+ *
+ * @can: pointer of struc ihb_can_ctx
+ * @sk_nodes: pointer of struct skin_node
+ * @pid_ihbnetsim: pointer of skin_node_sim_thread pid
+ * @pid_can_handler: can handler thread pid
+ * @ihb_info: pointer of struc ihb_node_info
+ */
+struct ihb_ctx {
+	void *can;
+	void *sk_nodes;
+	kernel_pid_t *pid_ihbnetsim;
+	kernel_pid_t pid_can_handler;
+	struct ihb_node_info ihb_info;
+};
+
 #endif
