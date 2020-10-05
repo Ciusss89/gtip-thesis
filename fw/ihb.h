@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+/* API's RIOT-OS */
+#include "thread.h"
+
 #define ATTR_UNUSED __attribute__((unused))
+#define ATTR_NORET __attribute__((noreturn))
 
 #define WAIT_2000ms	(2000LU * US_PER_MS)	/* delay of 2s */
 #define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1s */
@@ -14,7 +18,46 @@
 #define WAIT_10ms	(10LU * US_PER_MS)	/* delay of 010ms */
 #define WAIT_5ms	(5LU * US_PER_MS)       /* delay of 005ms */
 
+/* Maximum length for MCU id string */
+#define MAX_MCU_ID_LEN (16u)
+#if defined CPUID_LEN && MAX_MCU_ID_LEN <= CPUID_LEN
+#error "CPUID_LEN > MAX_CPUID_LEN"
+#endif
+
+/* Maximum length of CAN driver name */
 #define MAX_INFO_LENGHT (31)
+
+/* Maximum length of CAN driver name */
+#define MAX_NAME_LEN (16)
+
+/* SK_N_S: Skin nodes for IHB */
+#ifndef SK_N_S
+#define SK_N_S (8u)
+#endif
+
+/* SK_T_S: Skin Tactile sensors per skin node */
+#ifndef SK_T_S
+#define SK_T_S (12u)
+#endif
+
+#define MAX_SK_NODES (256u)
+#define MAX_SK_TACTAILS (16u)
+
+/**
+ * struct skin_node - represent the collected data which are incoming by skin
+ *                    nodes. The struct skin_node is filled by pid_skin_handler
+ *
+ * @data: payload, the output of the tactile sensors
+ * @address: node's address
+ * @expired: true if a tactail node has passed way
+ *
+ * Struct size dipends by SK_T_S, if SK_T_S == 12, struct is 16bytes.
+ */
+struct skin_node {
+	uint8_t data[SK_T_S];
+	uint16_t address;
+	bool expired;
+};
 
 /**
  * struct ihb_node_info - contains the info of IHB node which are sent to HOST
@@ -43,20 +86,25 @@ struct ihb_node_info {
 };
 
 /**
- * struct ihb_ctx - it's a containter of ihb data, info and other stuff.
+ * struct ihb_ctx - IHB context struct
  *
- * @can: pointer of struc ihb_can_ctx
- * @sk_nodes: pointer of struct skin_node
- * @pid_ihbnetsim: pointer of skin_node_sim_thread pid
- * @pid_can_handler: can handler thread pid
- * @ihb_info: pointer of struc ihb_node_info
+ * @mcu_controller_uid: MCU's unique ID
+ * @can_drv_name: the name of the can controller
+ * @pid_skin_handler: pid of submodule skin driver
+ * @pid_can_handler: pid of submodule can driver
+ * @ihb_info: the info about the node which is sent to host
+ * @can_frame_id: can frame identifier, it's obtainded by the MCU unique ID
+ * @can_isotp_ready: if true the IHB can send the isotp chunks to host
+ * @can_perh_id: peripheral identifier of the MCU's CAN controller
  */
 struct ihb_ctx {
-	void *can;
-	void *sk_nodes;
+	char mcu_controller_uid[MAX_MCU_ID_LEN * 2 + 1];
+	char can_drv_name[MAX_NAME_LEN + 1];
 	kernel_pid_t pid_skin_handler;
 	kernel_pid_t pid_can_handler;
 	struct ihb_node_info ihb_info;
+	uint8_t can_frame_id;
+	uint8_t can_perh_id;
+	bool can_isotp_ready;
 };
-
 #endif

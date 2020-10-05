@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
+#include <errno.h>
 
 /* RIOT APIs */
 #include "periph/cpuid.h"
@@ -16,7 +17,6 @@
 #include "xtimer.h"
 #include "board.h"
 #include "msg.h"
-/* RIOT CAN APIs */
 #include "can/conn/raw.h"
 #include "can/device.h"
 #include "can/can.h"
@@ -29,7 +29,7 @@
 #include "ihb.h"
 
 #define CAN_THREAD_HELP "ihb-can thread"
-
+#define PRINT_INFO "CAN controller num=%d\nCAN driver name=%s\nMCU id=%s\nCAN frame id=%#x\nFSM state = %s\n"
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
 /* ASCII message "IHB-ID" : ihb discovery message sent on CAN bus */
@@ -44,39 +44,25 @@ static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x4D, 0x53, 0x54, 0
 static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x43, 0x4B, 0x50, 0};
 
 static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
-static struct ihb_can_ctx *can = NULL;
 static struct ihb_ctx *IHB = NULL;
 static uint8_t LSBytes[2];
-
-static int  _scan_for_controller(struct ihb_can_ctx *device)
-{
-	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
-
-	if (raw_can && strlen(raw_can) < CAN_NAME_LEN) {
-		device->can_perh_id = CAN_C;
-		strcpy(device->can_drv_name, raw_can);
-		DEBUG("[#] CAN controller=%d, name=%s\n", device->can_perh_id, device->can_drv_name);
-		return 0;
-	}
-
-	return 1;
-}
 
 static void _start_isotp_tx(void)
 {
 	/* Open the iso-tp socket */
-	ihb_isotp_init(can->can_perh_id,
+	ihb_isotp_init(IHB->can_perh_id,
 		       ISOTP_TIMEOUT_DEF,
-		       &(can->can_isotp_ready));
+		       &(IHB->can_isotp_ready));
 
-	/* Send the ihb-info as first chunks */
+	/* Send the ihb-info as first chunk */
 	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info), 1) > 0) {
-		can->can_isotp_ready = true;
+		IHB->can_isotp_ready = true;
 		
 		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
-			can->can_isotp_ready = false;
+			IHB->can_isotp_ready = false;
 			ihb_isotp_close();
-			puts("[!] ihb: pid_can_handler is unknown or not sleeping");
+			puts("[!] ihb: pid_skin_handler is undef or not sleeping");
+			state_event(FAIL);
 			return;
 		}
 
@@ -84,6 +70,7 @@ static void _start_isotp_tx(void)
 	} else {
 		/* !TODO: Handle this patch code */
 		ihb_isotp_close();
+		state_event(FAIL);
 	}
 }
 
@@ -93,14 +80,14 @@ static bool _raw_init(conn_can_raw_t *socket,
 {
 	int r;
 
-	r = conn_can_raw_create(socket, NULL, 0, can->can_perh_id, 0);
+	r = conn_can_raw_create(socket, NULL, 0, IHB->can_perh_id, 0);
 	if (r < 0) {
 		printf("[!] cannot create the CAN socket: err=%d\n", r);
 		return false;
 	}
 
-	/* Configure the frame which has to be send */
-	frame->can_id = can->can_frame_id;
+	/* Configure the frame to be sent to host */
+	frame->can_id = IHB->can_frame_id;
 	frame->can_dlc = 8;
 
 	/* Last two bytes of message are the LSBytes of MCU unique id */
@@ -156,10 +143,10 @@ static void _raw_frame_analize(struct can_frame *frame)
 		if (memcmp(&add_fix, frame->data, 7) == 0) {
 			printf("[*] IHB CAN id received, NEW=%#x, OLD=%#x\n",
 					frame->data[7],
-					can->can_frame_id);
+					IHB->can_frame_id);
 			if (frame->data[4] == LSBytes[0] &&
 			    frame->data[5] == LSBytes[1])
-				can->can_frame_id = frame->data[7];
+				IHB->can_frame_id = frame->data[7];
 			state_event(RUNT_FIX);
 			/* TODO: send ack to ihbtool */
 			return;
@@ -186,12 +173,12 @@ static int _raw_rcv_set_filter(conn_can_raw_t *socket, struct can_filter *filter
 	if (state_is(IDLE))
 		filter->can_id = IHBTOLL_FRAME_ID;
 	else if (state_is(NOTIFY))
-		filter->can_id = can->can_frame_id;
+		filter->can_id = IHB->can_frame_id;
 
-	/* Set hw filer to receive frame which have my CAN frame ID */
+	/* Set hw filer to recevive only the messages with filter->can_id */
 	r = conn_can_raw_set_filter(socket, filter, 1);
 	if (r < 0) {
-		printf("[!] cannot add the filter to the socket: err=%d", r);
+		printf("[!] cannot add the filter to the socket: err=%d\n", r);
 		return r;
 	}
 
@@ -205,7 +192,7 @@ static int _raw_frame_snd(conn_can_raw_t *socket, struct can_frame *frame)
 	/* Remove hw filter */
 	r = conn_can_raw_set_filter(socket, NULL, 0);
 	if (r < 0) {
-		printf("[!] cannot remove filter from socket: err=%d", r);
+		printf("[!] cannot remove filter from socket: err=%d\n", r);
 		state_event(FAIL);
 		return r;
 	}
@@ -223,8 +210,8 @@ static int _raw_frame_snd(conn_can_raw_t *socket, struct can_frame *frame)
 
 static void _add_can_info(void)
 {
-	strncpy(IHB->ihb_info.mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
-	IHB->ihb_info.mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
+	strncpy(IHB->ihb_info.mcu_uid, IHB->mcu_controller_uid, strlen(IHB->mcu_controller_uid));
+	IHB->ihb_info.mcu_uid[strlen(IHB->mcu_controller_uid)] = '\0';
 	IHB->ihb_info.isotp_timeo = ISOTP_TIMEOUT_DEF;
 }
 
@@ -262,8 +249,8 @@ try_again:
 		}
 
 		/*
-		 * In IDLE state, the _raw_frame_snd is not need then set the
-		 * filter only one time (the first time)
+		 * In the IDLE state, the _raw_frame_snd is not needed then set
+		 * the filter only one time (the first time)
 		 */
 		if (first_run) {
 			_raw_rcv_set_filter(&conn, filter);
@@ -310,32 +297,36 @@ err:
 	return NULL;
 }
 
-void ihb_can_module_info(struct ihb_can_ctx *can)
+void ihb_can_module_info(void)
 {
-	printf("- CAN: struct ihb_can_ctx address=%p, size=%ubytes",
-		(void *)can,
-		sizeof(struct ihb_can_ctx));
-
-	printf("\n\tCAN controller num=%d\n\tCAN driver name=%s\n\tMCU id=%s\n\tCAN frame id=%#x\n",
-		can->can_perh_id,
-		can->can_drv_name,
-		can->mcu_controller_uid,
-		can->can_frame_id);
-
-	printf("- FSM state = %s\n", state_print());
-
+	printf(PRINT_INFO,
+		IHB->can_perh_id,
+		IHB->can_drv_name,
+		IHB->mcu_controller_uid,
+		IHB->can_frame_id,
+		state_print());
 	return;
 }
 
-int ihb_init_can(void *ctx)
+static int  _controller_probe(void)
+{
+	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
+
+	if (raw_can && strlen(raw_can) < MAX_NAME_LEN) {
+		IHB->can_perh_id = CAN_C;
+		strcpy(IHB->can_drv_name, raw_can);
+		DEBUG("[#] CAN controller=%d, name=%s\n", IHB->can_perh_id, IHB->can_drv_name);
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
+int ihb_init_can(struct ihb_ctx *ihb_ctx)
 {
 	uint8_t unique_id[CPUID_LEN];
-	kernel_pid_t pid;
-	IHB = ctx;
+	IHB = ihb_ctx;
 	char *b;
-
-	can = xmalloc(sizeof(struct ihb_can_ctx));
-	memset(can, 0, sizeof(struct ihb_can_ctx));
 
 	/* Get the Unique identifier from the MCU */
 	cpuid_get(unique_id);
@@ -347,7 +338,7 @@ int ihb_init_can(void *ctx)
 	}
 
 	b = data2str(unique_id, CPUID_LEN);
-	strcpy(can->mcu_controller_uid, b);
+	strcpy(IHB->mcu_controller_uid, b);
 	free(b);
 
 	/* For STM target the least significant bit are first two.. */
@@ -361,36 +352,22 @@ int ihb_init_can(void *ctx)
 	 * Generate an Unique CAN ID from the MCU's unique ID
 	 * the fletcher8 hash function returns a not null value
 	 */
-	can->can_frame_id = fletcher8(unique_id, MAX_MCU_ID_LEN);
+	ihb_ctx->can_frame_id = fletcher8(unique_id, MAX_MCU_ID_LEN);
 #if defined(IHB_FORCE_CAN_ID)
-	can->can_frame_id = IHB_FORCE_CAN_ID;
+	ihb_ctx->can_frame_id = IHB_FORCE_CAN_ID;
 #endif
-	DEBUG("[*] CAN ID=%d\n", can->can_frame_id);
+	DEBUG("[*] CAN ID=%d\n", ihb_ctx->can_frame_id);
 
-	if( _scan_for_controller(can) != 0) {
+	if( _controller_probe() != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
-		free(can);
 		return -1;
 	}
 	
-	pid = thread_create(can_handler_node_stack,
-			    sizeof(can_handler_node_stack),
-			    THREAD_PRIORITY_MAIN - 2,
-			    THREAD_CREATE_SLEEPING,
-			    _can_fsm_thread, NULL,
-			    CAN_THREAD_HELP);
-
-	if(pid < KERNEL_PID_UNDEF) {
-		puts("[!] cannot create ihb can handler thread");
-		free(can);
-		return -1;
-	}
-
-	/* Save the can CAN context */
-	IHB->can = can;
-
-	DEBUG("[*] IHB: init CAN subumodule success\n");
-	thread_wakeup(pid);
-	return pid;
+	return  thread_create(can_handler_node_stack,
+			      sizeof(can_handler_node_stack),
+			      THREAD_PRIORITY_MAIN - 2,
+			      THREAD_CREATE_SLEEPING,
+			      _can_fsm_thread, NULL,
+			      CAN_THREAD_HELP);
 }

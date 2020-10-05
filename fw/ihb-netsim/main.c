@@ -29,11 +29,11 @@ static char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 #ifdef MODULE_IHBCAN
 #include "ihb-can/can.h"
-static struct ihb_can_ctx *can = NULL;
 #endif
 
 const size_t data_bs = sizeof(struct skin_node);
 static struct skin_node *sk = NULL;
+struct ihb_ctx *IHB = NULL;
 uint8_t us_fail_node = 255;
 
 static void _usage(void)
@@ -106,23 +106,15 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 			}
 		}
 
-#ifdef MODULE_IHBCAN
 		/* To check the isotp_ready flag the struct CAN must be valid */
-		if (can) { //needless
-			if(can->can_isotp_ready)
-				ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
-			else
-				thread_sleep();
-		} else {
-			thread_sleep();
-		}
+		if(IHB->can_isotp_ready)
+#ifdef MODULE_IHBCAN
+			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
 #else
-		/*
-		 * If the MODULE_IHBCAN is not present this thread needs a
-		 * delay otherwise it becomes a CPU killer.
-		 */
-		xtimer_usleep(WAIT_1000ms);
+			xtimer_usleep(WAIT_1000ms);
 #endif
+		else
+			thread_sleep();
 
 		/*
 		 * You can add a delay if you needs it
@@ -131,15 +123,13 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 	}
 }
 
-
-int ihb_init_netsimulator(void *ctx)
+int ihb_init_netsimulator(struct ihb_ctx *ihb_ctx)
 {
 	sk = xcalloc(SK_N_S, data_bs);
-	struct ihb_ctx *IHB = ctx;
+	IHB = ihb_ctx;
 
 	IHB->ihb_info.skin_nodes = SK_N_S;
 	IHB->ihb_info.skin_tactails = SK_T_S;
-	IHB->sk_nodes = sk;
 
 	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n",
 			SK_N_S, SK_T_S);
@@ -147,9 +137,6 @@ int ihb_init_netsimulator(void *ctx)
 	/* Initialize speudo_random*/
 	random_init(13);
 
-#ifdef MODULE_IHBCAN
-	can = IHB->can;
-#endif
 	return thread_create(skin_sim_stack,
 				sizeof(skin_sim_stack),
 				THREAD_PRIORITY_MAIN - 1,
@@ -158,13 +145,9 @@ int ihb_init_netsimulator(void *ctx)
 				NULL, SK_THREAD_HELP);
 }
 
-void ihb_skin_module_info(struct  skin_node *ctx)
+void ihb_skin_module_info(void)
 {
-	printf("- SKIN: struct skin_nodes address=%p, size=%ubytes",
-			(void *)ctx,
-			sizeof(struct skin_node));
-
-	printf("\n\tTactile sensors for node=%u\n\tSkin nodes=%u\n",
+	printf("Tactile sensors for node=%u\nSkin nodes=%u\n",
 		SK_T_S,
 		SK_N_S);
 }

@@ -13,11 +13,12 @@
 #include "thread.h"
 
 #ifdef MODULE_IHBNETSIM
-#define SK_USERSPACE_HELP "ihb-netsim userspace tool"
+#define SK_USERSPACE_HELP "ihb-netsim modules info"
 #include "ihb-netsim/skin.h"
 #endif
 
 #ifdef MODULE_IHBCAN
+#define CAN_USERSPACE_HELP "ihb-can modules info"
 #include "ihb-can/can.h"
 #endif
 
@@ -36,21 +37,13 @@ static int ihb_struct_list(ATTR_UNUSED int argc, ATTR_UNUSED char **argv)
 	puts("[*] IHB info");
 
 #ifdef MODULE_IHBCAN
-	if(IHB.can) {
-		ihb_can_module_info(IHB.can);
-		printf("- PIDs:\n\tnotify=%d\n", IHB.pid_can_handler);
-	} else {
-		puts("[!] BUG: struct ihb_can_ctx never should be null");
-	}
+	ihb_can_module_info();
+	printf("PID: can submodule=%d\n", IHB.pid_can_handler);
 #endif
 
 #ifdef MODULE_IHBNETSIM
-	if(IHB.sk_nodes) {
-		ihb_skin_module_info(IHB.sk_nodes);
-		printf("- PIDs:\n\tNetSkinSimulator=%d\n", IHB.pid_skin_handler);
-	} else {
-		puts("[!] BUG: struct sk_nodes never should be null");
-	}
+	ihb_skin_module_info();
+	printf("PID: netsim submodule=%d\n", IHB.pid_skin_handler);
 #endif
 	return 0;
 }
@@ -60,7 +53,7 @@ static const shell_command_t shell_commands[] = {
 #ifdef MODULE_IHBNETSIM
 	{ "skin", SK_USERSPACE_HELP, skin_node_handler},
 #endif
-	{ "ihb", "ihb data info", ihb_struct_list},
+	{ "ihb", CAN_USERSPACE_HELP, ihb_struct_list},
 	{ NULL, NULL, NULL }
 };
 static char line_buf[SHELL_DEFAULT_BUFSIZE];
@@ -87,6 +80,7 @@ static int ihb_modules_init(void)
 	if(IHB.pid_skin_handler < KERNEL_PID_UNDEF)
 		return -1;
 
+	thread_wakeup(IHB.pid_skin_handler);
 	puts("[*] MODULE_IHBNETSIM [OK]");
 #endif
 
@@ -95,6 +89,7 @@ static int ihb_modules_init(void)
 	if(IHB.pid_can_handler < KERNEL_PID_UNDEF)
 		return -1;
 
+	thread_wakeup(IHB.pid_can_handler);
 	puts("[*] MODULE_IHBCAN [OK]");
 #endif
 
