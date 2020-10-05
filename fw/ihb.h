@@ -7,6 +7,8 @@
 /* RIOT APIs */
 #include "thread.h"
 
+#define ATTR_UNUSED __attribute__((unused))
+
 #define WAIT_2000ms	(2000LU * US_PER_MS)	/* delay of 2s */
 #define WAIT_1000ms	(1000LU * US_PER_MS)	/* delay of 1s */
 #define WAIT_500ms	(500LU * US_PER_MS)	/* delay of 500ms */

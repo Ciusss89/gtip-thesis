@@ -31,8 +31,7 @@ char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 
 static struct ihb_ctx IHB;
 
-static int ihb_struct_list(__attribute__((unused)) int argc,
-			   __attribute__((unused)) char **argv)
+static int ihb_struct_list(ATTR_UNUSED int argc, ATTR_UNUSED char **argv)
 {
 	puts("[*] IHB info");
 
