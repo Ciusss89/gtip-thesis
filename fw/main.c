@@ -91,20 +91,11 @@ static int ihb_modules_init(void)
 #endif
 
 #ifdef MODULE_IHBCAN
-	IHB.can = NULL;
-	puts("[*] MODULE_IHBCAN");
-
-	/*
-	 * To work IHBCAN needs the data which must be sent to host by isotp,
-	 * pid_data_gen consists in the thread which will be turn on by this
-	 * module to acquire the data to send.
-	 */
-	if(pid_data_gen < KERNEL_PID_UNDEF)
+	IHB.pid_can_handler = ihb_init_can(&IHB);
+	if(IHB.pid_can_handler < KERNEL_PID_UNDEF)
 		return -1;
 
-	IHB.pid_can_handler = ihb_can_init(&IHB, pid_data_gen);
-	if(!IHB.can || IHB.pid_can_handler < KERNEL_PID_UNDEF)
-		return -1;
+	puts("[*] MODULE_IHBCAN [OK]");
 #endif
 
 	return 0;

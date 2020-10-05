@@ -94,7 +94,7 @@ void ihb_can_module_info(struct ihb_can_ctx *ctx);
  *
  * Return pid of can handler thread on a success, num < 0 otherwise.
  */
-int ihb_can_init(void *ctx, kernel_pid_t _data_source);
+int ihb_init_can(void *ctx);
 
 /* FILE: ihb-can/sender.c */
 

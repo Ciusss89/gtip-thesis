@@ -11,14 +11,11 @@
 #include <string.h>
 
 /* RIOT APIs */
+#include "periph/cpuid.h"
 #include "thread.h"
 #include "xtimer.h"
 #include "board.h"
 #include "msg.h"
-
-/* RIOT APIs */
-#include "periph/cpuid.h"
-
 /* RIOT CAN APIs */
 #include "can/conn/raw.h"
 #include "can/device.h"
@@ -30,6 +27,8 @@
 #include "ihb-tools/tools.h"
 #include "can.h"
 #include "ihb.h"
+
+#define CAN_THREAD_HELP "ihb-can thread"
 
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
 
@@ -45,12 +44,8 @@ static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x4D, 0x53, 0x54, 0
 static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x43, 0x4B, 0x50, 0};
 
 static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
-
-/* PID which generate the data which have to sent by isotp */
-static kernel_pid_t pid_of_data_source;
-
-static struct ihb_node_info *info = NULL;
 static struct ihb_can_ctx *can = NULL;
+static struct ihb_ctx *IHB = NULL;
 static uint8_t LSBytes[2];
 
 static int  _scan_for_controller(struct ihb_can_ctx *device)
@@ -75,10 +70,16 @@ static void _start_isotp_tx(void)
 		       &(can->can_isotp_ready));
 
 	/* Send the ihb-info as first chunks */
-	if (ihb_isotp_send_chunks(info, sizeof(struct ihb_node_info), 1) > 0) {
-		free(info);
+	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info), 1) > 0) {
 		can->can_isotp_ready = true;
-		thread_wakeup(pid_of_data_source);
+		
+		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
+			can->can_isotp_ready = false;
+			ihb_isotp_close();
+			puts("[!] ihb: pid_can_handler is unknown or not sleeping");
+			return;
+		}
+
 		puts("[*] ihb: node is sending data");
 	} else {
 		/* !TODO: Handle this patch code */
@@ -222,12 +223,12 @@ static int _raw_frame_snd(conn_can_raw_t *socket, struct can_frame *frame)
 
 static void _add_can_info(void)
 {
-	strncpy(info->mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
-	info->mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
-	info->isotp_timeo = ISOTP_TIMEOUT_DEF;
+	strncpy(IHB->ihb_info.mcu_uid, can->mcu_controller_uid, strlen(can->mcu_controller_uid));
+	IHB->ihb_info.mcu_uid[strlen(can->mcu_controller_uid)] = '\0';
+	IHB->ihb_info.isotp_timeo = ISOTP_TIMEOUT_DEF;
 }
 
-static void *_can_fsm_thread(__attribute__((unused)) void *arg)
+static void *_can_fsm_thread(ATTR_UNUSED void *arg)
 {
 	struct can_frame *snd_frame = xmalloc(sizeof(struct can_frame));
 	struct can_frame *rcv_frame = xmalloc(sizeof(struct can_frame));
@@ -326,11 +327,11 @@ void ihb_can_module_info(struct ihb_can_ctx *can)
 	return;
 }
 
-int ihb_can_init(void *ctx, kernel_pid_t _data_source)
+int ihb_init_can(void *ctx)
 {
-	struct ihb_ctx *IHB = ctx;
 	uint8_t unique_id[CPUID_LEN];
 	kernel_pid_t pid;
+	IHB = ctx;
 	char *b;
 
 	can = xmalloc(sizeof(struct ihb_can_ctx));
@@ -372,13 +373,13 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 		free(can);
 		return -1;
 	}
-
+	
 	pid = thread_create(can_handler_node_stack,
 			    sizeof(can_handler_node_stack),
 			    THREAD_PRIORITY_MAIN - 2,
 			    THREAD_CREATE_SLEEPING,
 			    _can_fsm_thread, NULL,
-			    "ihb can handler");
+			    CAN_THREAD_HELP);
 
 	if(pid < KERNEL_PID_UNDEF) {
 		puts("[!] cannot create ihb can handler thread");
@@ -389,14 +390,7 @@ int ihb_can_init(void *ctx, kernel_pid_t _data_source)
 	/* Save the can CAN context */
 	IHB->can = can;
 
-	/* Get the ihb_info context */
-	info = &IHB->ihb_info;
-
-	/* Get the PID which generates the data to sent */
-	pid_of_data_source = _data_source;
-
 	DEBUG("[*] IHB: init CAN subumodule success\n");
-
 	thread_wakeup(pid);
 	return pid;
 }
