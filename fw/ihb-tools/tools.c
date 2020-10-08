@@ -69,13 +69,3 @@ char *data2str(const unsigned char *data, size_t len)
 
 	return r;
 }
-
-void buffer_clean(struct buffer_info *b)
-{
-	if(!b)
-		return;
-
-	b->length = 0;
-	if(b->data)
-		free(b->data);
-}
