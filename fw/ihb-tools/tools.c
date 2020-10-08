@@ -52,6 +52,14 @@ void *xcalloc(size_t nmemb, size_t size)
 	return p;
 }
 
+char *xstrdup(const char *s)
+{
+	char *p = strdup(s);
+	if (p == NULL)
+		oom();
+	return p;
+}
+
 char *data2str(const unsigned char *data, size_t len)
 {
 	char *r, *p;
