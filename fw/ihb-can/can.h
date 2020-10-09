@@ -4,19 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "thread.h"
-
-#define IHB_USERSPACE_HELP "ihb-can userspace tool"
-#define IHB_THREAD_HELP "ihb-can driver"
-
-/* Maximum length of CAN driver name */
-#define CAN_NAME_LEN (16 + 1)
-
-/* Maximum length for MCU id string */
-#define MAX_MCU_ID_LEN (16u)
-#if defined CPUID_LEN && MAX_MCU_ID_LEN <= CPUID_LEN
-#error "CPUID_LEN > MAX_CPUID_LEN"
-#endif
+#include "../ihb.h"
 
 /* MCU can have one or more CAN controllers, use first (0) */
 #define CAN_C (0)
@@ -57,44 +45,22 @@ typedef struct state_transition_table {
 	fsm_state_t nextstate;
 } fsm_table_t;
 
-/**
- * struc ihb_can_ctx - ihb can context struct contains data which are used by
- * 		       can submodule.
- *
- * @mcu_controller_uid: MCU's unique ID
- * @can_drv_name: the name of the can controller
- * @can_frame_id: can frame identifier, it's obtainded by the MCU unique ID
- * @can_isotp_ready: if true the IHB can send the isotp chunks to host
- * @can_perh_id: peripheral identifier of the MCU's CAN controller
- */
-struct ihb_can_ctx {
-	char mcu_controller_uid[MAX_MCU_ID_LEN * 2 + 1];
-	char can_drv_name[CAN_NAME_LEN];
-	uint8_t can_frame_id;
-	bool can_isotp_ready;
-	uint8_t can_perh_id;
-};
-
 /* FILE: ihb-can/main.c */
 
 /*
- * ihb_can_module_info() - print ihb_can_ctx struct contens
- *
- * @ctx: pointer of struct ihb_can_ctx
+ * ihb_can_module_info() - print can submodule info
  */
-void ihb_can_module_info(struct ihb_can_ctx *ctx);
+void ihb_can_module_info(void);
 
 /*
- * ihb_can_init() - inizialize the CAN module.
+ * ihb_init_can() - inizialize the CAN module.
  *
- * @ctx: pointer of struct ihb_ctx
- * @_data_source: pid of process which generates payload
+ * @ihb_ctx: ihb contex
  *
- * In case of success it adds the ihb_can_ctx struct pointer to ihb_ctx.
- *
+ * In case of success, it populates the CANs entries of @ihb_ctx
  * Return pid of can handler thread on a success, num < 0 otherwise.
  */
-int ihb_can_init(void *ctx, kernel_pid_t _data_source);
+int ihb_init_can(struct ihb_ctx *ihb_ctx);
 
 /* FILE: ihb-can/sender.c */
 

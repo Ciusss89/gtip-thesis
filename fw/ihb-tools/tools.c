@@ -1,11 +1,7 @@
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
-
-/* Riot API */
-#include "periph/pm.h"
+#include <stdint.h>
 
 #include "tools.h"
 
@@ -15,14 +11,14 @@ uint8_t fletcher8(const unsigned char * data, size_t n)
 	unsigned char tlen;
 
 	while (n) {
-	tlen = n > 20 ? 20 : n;
+		tlen = n > 20 ? 20 : n;
 
-	n -= tlen;
-	do {
-		sumB += sum += *data++;
-		} while (--tlen);
-		sum = (sum & 0xff) + (sum >> 8);
-		sumB = (sumB & 0xff) + (sumB >> 8);
+		n -= tlen;
+		do {
+			sumB += sum += *data++;
+			} while (--tlen);
+			sum = (sum & 0xff) + (sum >> 8);
+			sumB = (sumB & 0xff) + (sumB >> 8);
 	}
 	sum = (sum & 0xff) + (sum >> 8);
 	sumB = (sumB & 0xff) + (sumB >> 8);
@@ -30,10 +26,10 @@ uint8_t fletcher8(const unsigned char * data, size_t n)
 	return sumB << 8 | sum;
 }
 
-void oom(void)
+void  __attribute__((noreturn)) oom(void)
 {
 	puts("[!] out of memory\n");
-	pm_reboot();
+	abort();
 }
 
 void *xmalloc(size_t size)
@@ -52,30 +48,31 @@ void *xcalloc(size_t nmemb, size_t size)
 	return p;
 }
 
+char *xstrdup(const char *s)
+{
+	char *p = strdup(s);
+	if (p == NULL)
+		oom();
+	return p;
+}
+
 char *data2str(const unsigned char *data, size_t len)
 {
+	size_t i = 0;
 	char *r, *p;
-	size_t i;
 
 	r = xmalloc((len * 2 ) + 1);
 	p = r;
 
-	for (i=0; i < len; i++) {
-		sprintf(p, "%02x", data[i]);
+	for (; i < len; i++) {
+		if ((sprintf(p, "%02x", data[i])) != 2) {
+			free(r);
+			return NULL;
+		}
 		p += 2;
 	}
 
 	*p = '\0';
 
 	return r;
-}
-
-void buffer_clean(struct buffer_info *b)
-{
-	if(!b)
-		return;
-
-	b->length = 0;
-	if(b->data)
-		free(b->data);
 }

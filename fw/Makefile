@@ -4,7 +4,7 @@ APPLICATION = IHB.GTip
 
 ## Target
 #
-BOARD ?= nucleo-l476rg
+BOARD ?= native#nucleo-l476rg
 
 ## This has to be the absolute path to the RIOT base directory:
 #
@@ -12,7 +12,7 @@ RIOTBASE ?= $(CURDIR)/../../RIOT/
 
 ## Firmware version: <tag-name>-<last-commit-of-tag>-<date>
 #
-CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tags)-$(shell date --iso=date)\"
+CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tag --abbrev | cut -c 1-21)-$(shell date --iso=date)\"
 
 ## IHBNETSIM: Skin nodes for IHB. Set the network size, max size 256.
 #
