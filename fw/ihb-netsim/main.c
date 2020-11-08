@@ -54,7 +54,7 @@ int skin_node_handler(int argc, char **argv)
 			return -1;
 		}
 		us_fail_node = strtol(argv[2], NULL, 10);
-		if(us_fail_node > SK_N_S) {
+		if(us_fail_node >= SK_N_S) {
 			puts("[!] input is not vaild");
 			return -1;
 		}
