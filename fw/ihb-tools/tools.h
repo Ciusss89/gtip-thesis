@@ -7,7 +7,6 @@
 void __attribute__((noreturn)) oom(void);
 void *xmalloc(size_t size);
 void *xcalloc(size_t nmemb, size_t size);
-char *xstrdup(const char *s);
 char *data2str(const unsigned char *data, size_t len);
 uint8_t fletcher8(const unsigned char * data, size_t n);
 
