@@ -708,7 +708,7 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 
 				/* Collect the data which are incoming by IHB */
 
-				p = calloc(SK_N_S, str_sk_size);
+				p = calloc(sk_nodes_count, str_sk_size);
 				if(!p){
 					fprintf(stderr, BOLDRED"[!] calloc fails\n"RESET);
 					r = -ENOMEM;

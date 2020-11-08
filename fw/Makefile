@@ -4,7 +4,7 @@ APPLICATION = IHB.GTip
 
 ## Target
 #
-BOARD ?= native#nucleo-l476rg
+BOARD ?= nucleo-l476rg
 
 ## This has to be the absolute path to the RIOT base directory:
 #
@@ -21,6 +21,13 @@ CFLAGS += -DSK_N_S=16
 ## IHBNETSIM: Tactile sensors per Skin node, max size 12.
 #
 CFLAGS += -DSK_T_S=12
+
+## IHBCAN: Set the speed
+# 0 = 1MiB
+# 1 = 750KiB
+# 2 = 500KiB
+# 3 = 250KiB
+CFLAGS += -DCAN_SPEED=0
 
 ## IHBCAN: Set the timeout for ISO TP transmissions
 #

@@ -93,8 +93,9 @@ struct ihb_node_info {
  * @pid_skin_handler: pid of submodule skin driver
  * @pid_can_handler: pid of submodule can driver
  * @ihb_info: the info about the node which is sent to host
- * @can_frame_id: can frame identifier, it's obtainded by the MCU unique ID
+ * @can_frame_id: CAN frame identifier, it's obtainded by the MCU unique ID
  * @can_isotp_ready: if true the IHB can send the isotp chunks to host
+ * @can_speed: CAN bitrates in bits
  * @can_perh_id: peripheral identifier of the MCU's CAN controller
  */
 struct ihb_ctx {
@@ -105,6 +106,7 @@ struct ihb_ctx {
 	struct ihb_node_info ihb_info;
 	uint8_t can_frame_id;
 	uint8_t can_perh_id;
+	uint32_t can_speed;
 	bool can_isotp_ready;
 };
 #endif

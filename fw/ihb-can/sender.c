@@ -126,26 +126,19 @@ err:
 	return r;
 }
 
-int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb)
+int ihb_isotp_send_chunks(const void *data, const size_t length)
 {
-	const size_t length = data_bs * nmemb;
-	void *b = NULL;
 	int r;
 
-	if (!sck_ready || !in_data || data_bs == 0 || nmemb < 1)
+	if (!sck_ready || !data || length == 0)
 		return -EAGAIN;
 
-	/* Pay attention to memory consuming... */
-	b = xcalloc(data_bs, nmemb);
-	memcpy(b, in_data, length);
-
-	DEBUG("[#] Chunk=%ubytes, BlockSize=%dbytes Amount=%u add=%p\n",
-	      length, data_bs, nmemb, b);
+	DEBUG("[#] Chunk=%ubytes, data addr=%p\n", length, data);
 
 	/*
 	 * CAN_ISOTP_TX_DONT_WAIT make it not blocking.
 	 */
-	r = conn_can_isotp_send(&conn, b, length, 0);
+	r = conn_can_isotp_send(&conn, data, length, 0);
 
 	if(r < 0) {
 		isotp_sender_watchdog();
@@ -168,6 +161,5 @@ int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t nmemb)
 	DEBUG("[#] The iso-tp chunk has been sent\n");
 
 err:
-	free(b);
 	return r;
 }

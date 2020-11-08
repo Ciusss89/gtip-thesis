@@ -29,8 +29,19 @@
 #include "ihb.h"
 
 #define CAN_THREAD_HELP "ihb-can thread"
-#define PRINT_INFO "CAN controller num=%d\nCAN driver name=%s\nMCU id=%s\nCAN frame id=%#x\nFSM state = %s\n"
 #define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
+
+#if CAN_SPEED == 0
+#define SPEED 1000000 /*1MiB*/
+#elif CAN_SPEED == 1
+#define SPEED 750000 /* 750KiB */
+#elif CAN_SPEED == 2
+#define SPEED 500000 /* 500KiB */
+#elif CAN_SPEED == 3
+#define SPEED 250000 /* 250KiB*/
+#else
+#error "Bad speed paramiter"
+#endif
 
 /* ASCII message "IHB-ID" : ihb discovery message sent on CAN bus */
 static const unsigned char mgc[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0};
@@ -55,7 +66,7 @@ static void _start_isotp_tx(void)
 		       &(IHB->can_isotp_ready));
 
 	/* Send the ihb-info as first chunk */
-	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info), 1) > 0) {
+	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info)) > 0) {
 		IHB->can_isotp_ready = true;
 		
 		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
@@ -299,27 +310,53 @@ err:
 
 void ihb_can_module_info(void)
 {
-	printf(PRINT_INFO,
+	char *ptr = NULL;
+
+	ptr = state_print();
+
+	printf("CAN controller num=%d\nCAN driver name=%s\nMCU id=%s\nCAN bitrate=%"PRIu32"\nCAN frame id=%#x\nFSM state = %s\n",
 		IHB->can_perh_id,
 		IHB->can_drv_name,
 		IHB->mcu_controller_uid,
+		IHB->can_speed,
 		IHB->can_frame_id,
-		state_print());
-	return;
+		ptr);
+
+	free(ptr);
 }
 
 static int  _controller_probe(void)
 {
 	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
+	int ret;
 
-	if (raw_can && strlen(raw_can) < MAX_NAME_LEN) {
-		IHB->can_perh_id = CAN_C;
-		strcpy(IHB->can_drv_name, raw_can);
-		DEBUG("[#] CAN controller=%d, name=%s\n", IHB->can_perh_id, IHB->can_drv_name);
-		return 0;
-	}
+	if (!raw_can || strlen(raw_can) > MAX_NAME_LEN)
+		goto err;
 
-	return -ENODEV;
+	/*
+	 * Set the given bitrate/sample_point to the given controller
+	 *  - Maxinum controller speed is 1MiB.
+	 *  - The sample point is the location(in percent value) inside each bit period
+	 *    where the CAN controller looks at the state of the bus and determines if
+	 *    it is a logic zero (dominant) or logic one (recessive).
+	 *    The CAN-in-Automation user’s group makes recommendations of where the
+	 *    sample point should be for various bit rates: 87.5% the most common.
+	 */
+	ret = raw_can_set_bitrate(CAN_C, SPEED, 875);
+	if (ret != 0)
+		goto err;
+
+	/* Acquire controller info */
+	IHB->can_perh_id = CAN_C;
+	strcpy(IHB->can_drv_name, raw_can);
+	IHB->can_speed = SPEED;
+
+	DEBUG("[#] CAN controller=%d, name=%s, bitrate=%u\n",
+	      IHB->can_perh_id, IHB->can_drv_name, SPEED);
+	return 0;
+
+err:
+	return -1;
 }
 
 int ihb_init_can(struct ihb_ctx *ihb_ctx)
@@ -358,7 +395,7 @@ int ihb_init_can(struct ihb_ctx *ihb_ctx)
 #endif
 	DEBUG("[*] CAN ID=%d\n", ihb_ctx->can_frame_id);
 
-	if( _controller_probe() != 0) {
+	if(_controller_probe() != 0) {
 		/* this should never happened */
 		puts("[!] cannot binding the can controller");
 		return -1;
