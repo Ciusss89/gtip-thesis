@@ -84,17 +84,15 @@ int ihb_isotp_close(void);
 int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready);
 
 /*
- * ihb_isotp_send_chunks() - send chunks of data by iso-tp protocol. Function makes
- *                           a copy of in_data and sends it.
+ * ihb_isotp_send_chunks() - send chunks of data by iso-tp protocol.
  *
- * @in_data: pointer of the data which have to send
- * @data_bs: data block size
- * @count: count of data_bs which have to send
+ * @data: pointer of the data which have to send
+ * @lenght: data block size
  *
  * It returns 0 in case of success and can shutdown the isotp connection if it
  * goes in timeout (set false the flag can_isotp_ready).
  */
-int ihb_isotp_send_chunks(const void *in_data, size_t data_bs, size_t count);
+int ihb_isotp_send_chunks(const void *data, const size_t length);
 
 /* FILE: ihb-can/fsm.c */
 

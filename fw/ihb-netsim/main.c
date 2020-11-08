@@ -32,6 +32,7 @@ static char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 #endif
 
 const size_t data_bs = sizeof(struct skin_node);
+const size_t buffer_len = SK_N_S * data_bs;
 static struct skin_node *sk = NULL;
 struct ihb_ctx *IHB = NULL;
 uint8_t us_fail_node = 255;
@@ -73,9 +74,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 	/*
 	 * PAY ATTENTION:
 	 * If you run this module without MODULE IHBCAN or extra delay,
-	 * this loop becomes a CPU killer. It's like
-	 * while(1) {
-	 * }
+	 * this loop becomes a CPU killer like
 	 */
 	while (true) {
 
@@ -109,7 +108,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 		/* To check the isotp_ready flag the struct CAN must be valid */
 		if(IHB->can_isotp_ready)
 #ifdef MODULE_IHBCAN
-			ihb_isotp_send_chunks(sk, data_bs, SK_N_S);
+			ihb_isotp_send_chunks(sk, buffer_len);
 #else
 			xtimer_usleep(WAIT_1000ms);
 #endif

@@ -66,7 +66,7 @@ static void _start_isotp_tx(void)
 		       &(IHB->can_isotp_ready));
 
 	/* Send the ihb-info as first chunk */
-	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info), 1) > 0) {
+	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info)) > 0) {
 		IHB->can_isotp_ready = true;
 		
 		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
