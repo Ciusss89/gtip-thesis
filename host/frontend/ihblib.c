@@ -722,6 +722,7 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 				if(r != buff_l) {
 					fprintf(stdout, RED"[!] short rcv, ignore cunks #%d\n"RESET, cnt);
 					free(p);
+					p = NULL;
 					/*
 					 * This error is not critical, if
 					 * happens means that the received
