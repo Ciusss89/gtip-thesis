@@ -44,6 +44,10 @@ CAN="can0"
 	done
 }
 
+echo "[*] Configure CAN0 device, bitrate 1000000"
+sudo ip link set can0 type can bitrate 1000000
+sudo ip link set up can0
+
 echo "[*] Starting RAW CAN dump on periph $CAN"
 sleep 2
 gnome-terminal -q -- candump $CAN -c -a
