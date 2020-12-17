@@ -218,7 +218,7 @@ fi
 
 for f in /tmp/conf_script/*
 do
-	#gnome-terminal -q --hide-menubar --title="PREWIEW" --command "vi $f"
+	gnome-terminal -q --hide-menubar --title="PREWIEW" --command "vi $f"
 	echo "Excute $bold$f$normal script in a new shell: "
 	gnome-terminal -q --window --hide-menubar
 	read -p "continue [Y/n]" -n 1 -r
