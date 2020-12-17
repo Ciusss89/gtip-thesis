@@ -18,10 +18,6 @@ CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tag --abbrev | cut -c 1-21)-$(sh
 #
 CFLAGS += -DSK_N_S=16
 
-## IHBNETSIM: Tactile sensors per Skin node, max size 12.
-#
-CFLAGS += -DSK_T_S=12
-
 ## IHBCAN: Set the speed
 # 0 = 1MiB
 # 1 = 750KiB

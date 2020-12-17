@@ -19,7 +19,7 @@
 #define WAIT_5ms	(5LU * US_PER_MS)       /* delay of 005ms */
 
 /* Maximum length for MCU id string */
-#define MAX_MCU_ID_LEN (16u)
+#define MAX_MCU_ID_LEN (16)
 #if defined CPUID_LEN && MAX_MCU_ID_LEN <= CPUID_LEN
 #error "CPUID_LEN > MAX_CPUID_LEN"
 #endif
@@ -32,16 +32,14 @@
 
 /* SK_N_S: Skin nodes for IHB */
 #ifndef SK_N_S
-#define SK_N_S (8u)
+#define SK_N_S (16)
 #endif
 
-/* SK_T_S: Skin Tactile sensors per skin node */
-#ifndef SK_T_S
-#define SK_T_S (12u)
-#endif
+/* SK_T_S: Skin Taxel sensors per skin node */
+#define SK_T_S (12)
 
-#define MAX_SK_NODES (256u)
-#define MAX_SK_TACTAILS (16u)
+/* Each SPI bus can have almost 62 nodes */
+#define SKIN_MAX_COUNT  (62 * 4)
 
 /**
  * struct skin_node - represent the collected data which are incoming by skin
@@ -50,12 +48,10 @@
  * @data: payload, the output of the tactile sensors
  * @address: node's address
  * @expired: true if a tactail node has passed way
- *
- * Struct size dipends by SK_T_S, if SK_T_S == 12, struct is 16bytes.
  */
 struct skin_node {
-	uint8_t data[SK_T_S];
-	uint16_t address;
+	uint16_t data[SK_T_S];
+	uint8_t address;
 	bool expired;
 };
 
@@ -67,8 +63,8 @@ struct skin_node {
  * @mcu_board: IHB board name
  * @riotos_ver: RIOT-OS release version
  * @ihb_fw_rev: IHB firmware release version
- * @skin_nodes: Number of skin nodes per IHB
- * @skin_tactails: Number of tactile sensors per skin node
+ * @skin_node_count: Number of skin nodes per IHB
+ * @skin_node_taxel: Number of tactile sensors per skin node
  * @isotp_timeo: timeout for ISO TP transmissions
  */
 struct ihb_node_info {
@@ -79,8 +75,8 @@ struct ihb_node_info {
 	char riotos_ver[MAX_INFO_LENGHT + 1];
 	char ihb_fw_rev[MAX_INFO_LENGHT + 1];
 
-	uint8_t skin_nodes;
-	uint8_t skin_tactails;
+	uint8_t skin_node_count;
+	uint8_t skin_node_taxel;
 
 	uint8_t isotp_timeo;
 };

@@ -17,6 +17,7 @@
 #include "xtimer.h"
 
 #define ENABLE_DEBUG    (0)
+
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
@@ -31,86 +32,102 @@ static char skin_sim_stack[THREAD_STACKSIZE_MEDIUM];
 #include "ihb-can/can.h"
 #endif
 
-const size_t data_bs = sizeof(struct skin_node);
-const size_t buffer_len = SK_N_S * data_bs;
+/* TAXEL ARRAY: ADC resolution (16 bit) * taxel amout (12) */
+const size_t skin_adc_payload = sizeof(uint16_t) * SK_T_S;
+
+/* SKIN MODULE BLOCK DATA SIZE */
+const size_t skin_data_bs = sizeof(struct skin_node);
+
+/* SKINS' ARRAY */
+const size_t skins_buffer_len = SK_N_S * skin_data_bs;
+
+uint8_t skin_fail_node = SKIN_MAX_COUNT;
 static struct skin_node *sk = NULL;
 struct ihb_ctx *IHB = NULL;
-uint8_t us_fail_node = 255;
 
 static void _usage(void)
 {
-	puts("SKIN nodes simulator userspace");
-	puts("\tskin fail <node> - set as expired the node");
+	puts("SKIN nodes simulator:");
+	printf("skin fail <#node> \t - set as expired the #node (0-%d)\n", SK_N_S - 1);
+	puts("skin start \t\t - wake up the thread");
+	puts("skin stop \t\t - sleep the thread");
 }
 
 int skin_node_handler(int argc, char **argv)
 {
-	if (argc < 2) {
-		_usage();
-		return -1;
+	if (argc < 1 || argc > 3)
+		goto fail;
+
+	if (strncmp(argv[1], "start", 5) == 0) {
+		if (!IHB)
+			return -1;
+
+		IHB->can_isotp_ready = true;
+		thread_wakeup(IHB->pid_skin_handler);
+
+	} else if (strncmp(argv[1], "stop", 4) == 0) {
+		IHB->can_isotp_ready = false;
+
 	} else if (strncmp(argv[1], "fail", 4) == 0) {
-		if (!argv[2]) {
-			puts("[!] input is not vaild");
-			return -1;
+		if (!argv[2])
+			goto fail;
+
+		skin_fail_node = strtol(argv[2], NULL, 10);
+		if (skin_fail_node >= SK_N_S || skin_fail_node >= SKIN_MAX_COUNT) {
+			skin_fail_node = SKIN_MAX_COUNT;
+			goto fail;
 		}
-		us_fail_node = strtol(argv[2], NULL, 10);
-		if(us_fail_node >= SK_N_S) {
-			puts("[!] input is not vaild");
-			return -1;
-		}
-		return 0;
+
 	} else {
-		printf("[!] unknown command: %s\n", argv[1]);
-		return -1;
+		goto fail;
 	}
 
 	return 0;
+fail:
+	_usage();
+	return -1;
 }
 
 void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 {
-	uint8_t i, j, b;
 
-	/*
-	 * PAY ATTENTION:
-	 * If you run this module without MODULE IHBCAN or extra delay,
-	 * this loop becomes a CPU killer like
-	 */
+	uint8_t i, j;
+
+	/* Fake skin address ...*/
+	for (i = 0; i < SK_N_S; i++)
+		sk[i].address = i;
+
 	while (true) {
 
-		/* Fill the struct ihb_structs with fake data */
+		/* Fill entries with fake data */
 		for(i = 0; i < SK_N_S; i++) {
-
-			/* Address... */
-			sk[i].address = i;
-
-			/* Force a skin node in failure state */
-			if(i == us_fail_node)
+			/* Simulate a failure state */
+			if (sk[i].address == skin_fail_node) {
 				sk[i].expired = true;
-
-			/* Tactails... */
-			for(j = 0; j < SK_T_S; j++) {
-				random_bytes(&b, 1);
-				sk[i].data[j] = b;
+				skin_fail_node = SKIN_MAX_COUNT;
 			}
+
+			/* Fake Taxels... */
+			random_bytes((uint8_t *)&sk[i].data[0], skin_adc_payload);
 		}
 
 		/* Printing to stdout breaks the timings */
 		if (ENABLE_DEBUG) {
 			for(i = 0; i < SK_N_S; i++) {
-				DEBUG("[0x%04x] Tactiles: ", sk[i].address);
+				DEBUG("[Addr=%#x] [Status=%s] Tactiles=[",
+				      sk[i].address,
+				      sk[i].expired ? "offline" : "online");
 				for(j = 0; j < SK_T_S; j++)
-					DEBUG(" %d=%02x", j, sk[i].data[j]);
-				puts(" ");
+					DEBUG(" %d=%#x", j, sk[i].data[j]);
+				puts(" ]");
 			}
 		}
 
-		/* To check the isotp_ready flag the struct CAN must be valid */
 		if(IHB->can_isotp_ready)
 #ifdef MODULE_IHBCAN
-			ihb_isotp_send_chunks(sk, buffer_len);
+			ihb_isotp_send_chunks(sk, skins_buffer_len);
 #else
-			xtimer_usleep(WAIT_1000ms);
+			xtimer_usleep(WAIT_2000ms);
 #endif
 		else
 			thread_sleep();
@@ -124,11 +141,14 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 
 int ihb_init_netsimulator(struct ihb_ctx *ihb_ctx)
 {
-	sk = xcalloc(SK_N_S, data_bs);
+	if (!ihb_ctx)
+		return -1;
+
+	sk = xcalloc(SK_N_S, skin_data_bs);
 	IHB = ihb_ctx;
 
-	IHB->ihb_info.skin_nodes = SK_N_S;
-	IHB->ihb_info.skin_tactails = SK_T_S;
+	IHB->ihb_info.skin_node_count = SK_N_S;
+	IHB->ihb_info.skin_node_taxel = SK_T_S;
 
 	printf("[*] Skin node simulator: Nodes=%u Sensors per node=%u\n",
 			SK_N_S, SK_T_S);
@@ -146,7 +166,7 @@ int ihb_init_netsimulator(struct ihb_ctx *ihb_ctx)
 
 void ihb_skin_module_info(void)
 {
-	printf("Tactile sensors for node=%u\nSkin nodes=%u\n",
+	printf("Taxel sensors for node=%u\nSkin nodes=%u\n",
 		SK_T_S,
 		SK_N_S);
 }
