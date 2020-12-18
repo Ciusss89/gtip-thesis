@@ -14,7 +14,7 @@ RIOTBASE ?= $(CURDIR)/../../RIOT/
 #
 CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tag --abbrev | cut -c 1-21)-$(shell date --iso=date)\"
 
-## IHBNETSIM: Skin nodes for IHB. Set the network size, max size 256.
+## IHBNETSIM: Skin nodes for IHB. Set the network size, max size 248.
 #
 CFLAGS += -DSK_N_S=16
 

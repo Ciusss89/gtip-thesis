@@ -18,7 +18,6 @@
 #endif
 
 #ifdef MODULE_IHBCAN
-#define CAN_USERSPACE_HELP "ihb-can modules info"
 #include "ihb-can/can.h"
 #endif
 
@@ -53,7 +52,7 @@ static const shell_command_t shell_commands[] = {
 #ifdef MODULE_IHBNETSIM
 	{ "skin", SK_USERSPACE_HELP, skin_node_handler},
 #endif
-	{ "ihb", CAN_USERSPACE_HELP, ihb_struct_list},
+	{ "ihb", "ihb modules info", ihb_struct_list},
 	{ NULL, NULL, NULL }
 };
 static char line_buf[SHELL_DEFAULT_BUFSIZE];
