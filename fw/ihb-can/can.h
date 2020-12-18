@@ -21,6 +21,15 @@
 #define IHBTOLL_FRAME_ID 0x100
 #endif
 
+/* Maximum length for MCU id string */
+#define MAX_MCU_ID_LEN (16)
+#if defined CPUID_LEN && MAX_MCU_ID_LEN <= CPUID_LEN
+#error "CPUID_LEN > MAX_CPUID_LEN"
+#endif
+
+/* Maximum length of CAN driver name */
+#define MAX_NAME_LEN (16)
+
 typedef enum {
 	IDLE = 0x0,
 	NOTIFY,

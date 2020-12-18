@@ -25,6 +25,7 @@
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
+#include "message.h"
 #include "can.h"
 #include "ihb.h"
 
@@ -42,17 +43,6 @@
 #else
 #error "Bad speed paramiter"
 #endif
-
-/* ASCII message "IHB-ID" : ihb discovery message sent on CAN bus */
-static const unsigned char mgc[] = {0x49, 0x48, 0x42, 0x2D, 0x49, 0x44, 0};
-/* ASCII message "IHB-" : receive new address by ihbtool, runtime fix */
-static unsigned char add_fix[8] = {0x49, 0x48, 0x42, 0x2D, 0x0, 0x0, 0x3D, 0x0};
-/* ASCII message "IHB-WKUP" : switch the node in notify state */
-static const unsigned char wkup[] = {0x49, 0x48, 0x42, 0x2D, 0x57, 0x4B, 0x55, 0x50, 0};
-/* ASCII message "IHB-MSTR" : switch the node in action state */
-static const unsigned char mstr[] = {0x49, 0x48, 0x42, 0x2D, 0x4D, 0x53, 0x54, 0x52, 0};
-/* ASCII message "IHB-BCKP" : switch the node in backup state */
-static const unsigned char bckp[] = {0x49, 0x48, 0x42, 0x2D, 0x42, 0x43, 0x4B, 0x50, 0};
 
 static char can_handler_node_stack[THREAD_STACKSIZE_MEDIUM];
 static struct ihb_ctx *IHB = NULL;
