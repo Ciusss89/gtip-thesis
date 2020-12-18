@@ -1,5 +1,5 @@
-#ifndef IHB_H
-#define IHB_H
+#ifndef IHBTOOL_H
+#define IHBTOOL_H
 
 #define RESET   "\033[0m"
 #define BLACK   "\033[30m"      /* Black */

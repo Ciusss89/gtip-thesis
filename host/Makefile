@@ -5,8 +5,6 @@
 
 MAKEFLAGS += --no-print-directory
 
-VERSION = 0.1.dev
-
 DESTDIR ?=
 PREFIX ?= /usr/local
 
@@ -21,7 +19,7 @@ EXTRA_CFLAGS += \
 		-D IHBTOOL_VER=\"$(shell git describe --tags)-$(shell date --iso=date)\" \
 		-D IHBTOLL_FRAME_ID=0x100
 
-DEPS = ihb.h lib.h
+DEPS = ihbtool.h lib.h ihb.h message.h
 OBJ = main.o ihblib.o lib.o
 
 %.o: %.c $(DEPS)

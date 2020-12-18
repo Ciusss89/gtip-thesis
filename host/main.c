@@ -14,7 +14,7 @@
 
 #include <net/if.h>
 
-#include "ihb.h"
+#include "ihbtool.h"
 
 static bool running;
 

@@ -24,10 +24,11 @@
 #include <linux/can/isotp.h>
 #include <linux/sockios.h>
 
-#include "ihb.h"
+#include "ihbtool.h"
 
-/* IHB device */
-#include "ihb-dev.h"
+/* The ihb.h and message.h are simbolik links to firmware libs*/
+#include "ihb.h"
+#include "message.h"
 
 /* CAN-UTILS lib */
 #include "lib.h"
@@ -559,8 +560,8 @@ static void ihb_info_print(struct ihb_node_info *info)
 	printf("| IHB board name  %s\n", info->mcu_board);
 	printf("| IHB mcu arch    %s\n", info->mcu_arch);
 	printf("| IHB board uid   %s\n", info->mcu_uid);
-	printf("| IHB skin nodes  %d\n", info->skin_nodes);
-	printf("| SKIN tactiles   %d\n", info->skin_tactails);
+	printf("| IHB skin nodes  %d\n", info->skin_node_count);
+	printf("| SKIN tactiles   %d\n", info->skin_node_taxel);
 	printf("| ISO TP timeout  %u\n", info->isotp_timeo);
 	puts("*------------------------------------------------");
 }
@@ -718,6 +719,7 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 				ioctl(fd, SIOCGSTAMP, &start_tv);
 				r = read(fd, p, buff_l);
 				ioctl(fd, SIOCGSTAMP, &end_tv);
+				cnt++;
 
 				if(r != buff_l) {
 					fprintf(stdout, RED"[!] short rcv, ignore cunks #%d\n"RESET, cnt);
@@ -752,8 +754,6 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 						cnt,
 						buff);
 
-					cnt++;
-
 					free(p);
 					free(buff);
 				}
@@ -778,20 +778,20 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 				if (p) {
 					ihb_node = (struct ihb_node_info *)p;
 
-					if (ihb_node->skin_nodes < MAX_SK_NODES)
-						sk_nodes_count = ihb_node->skin_nodes;
+					if (ihb_node->skin_node_count <= SKIN_MAX_COUNT)
+						sk_nodes_count = ihb_node->skin_node_count;
 					else {
 						fprintf(stderr, BOLDRED"[!] MAX_SK_NODES=%d\n"RESET,
-								MAX_SK_NODES);
+								SKIN_MAX_COUNT);
 						r = -EOVERFLOW;
 						break;
 					}
 
-					if (ihb_node->skin_tactails < MAX_SK_TACTAILS)
-						sk_tacts = ihb_node->skin_tactails;
+					if (ihb_node->skin_node_taxel <= SK_T_S)
+						sk_tacts = ihb_node->skin_node_taxel;
 					else {
 						fprintf(stderr, BOLDRED"[!] MAX_SK_TACTAILS=%d\n"RESET,
-								MAX_SK_TACTAILS);
+								SK_T_S);
 						r = -EOVERFLOW;
 						break;
 					}
