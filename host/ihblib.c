@@ -536,8 +536,8 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(d);
-	addr.can_addr.tp.tx_id = 0x708;
-	addr.can_addr.tp.rx_id = 0x700;
+	addr.can_addr.tp.tx_id = ISOTP_IHB_RX_PORT;
+	addr.can_addr.tp.rx_id = ISOTP_IHB_TX_PORT;
 
 	r = bind(*can_soc_fd, (struct sockaddr *)&addr, sizeof(addr));
 
