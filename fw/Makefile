@@ -29,14 +29,6 @@ CFLAGS += -DCAN_SPEED=0
 #
 CFLAGS += -DISOTP_TIMEOUT_DEF=2
 
-## IHBCAN: Set the tx port for ISO TP transmissions
-#
-CFLAGS += -DISOTP_TX_PORT=0x700
-
-## IHBCAN: Set the rx port ISO TP transmissions
-#
-CFLAGS += -DISOTP_RX_PORT=0x708
-
 ## IHBCAN: Set the IHBTOOL broadcast frame id
 #
 CFLAGS += -DIHBTOLL_FRAME_ID=0x100

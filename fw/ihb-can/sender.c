@@ -20,16 +20,6 @@
 #include "ihb-tools/tools.h"
 #include "can.h"
 
-/* Set the tx port for ISO TP transmissions */
-#ifndef ISOTP_TX_PORT
-#define ISOTP_TX_PORT 0x700
-#endif
-
-/* Set the rx port for ISO TP transmissions */
-#ifndef ISOTP_RX_PORT
-#define ISOTP_RX_PORT 0x708
-#endif
-
 static bool snd_chunk_fails = false;
 static bool sck_ready = false;
 static conn_can_isotp_t conn;
@@ -80,9 +70,8 @@ int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready)
 
 	/* setup the socket */
 	memset(&isotp_opt, 0, sizeof(isotp_opt));
-	isotp_opt.tx_id = ISOTP_TX_PORT;
-	isotp_opt.rx_id = ISOTP_RX_PORT;
-	isotp_opt.txpad_content = 0xCE;
+	isotp_opt.tx_id = ISOTP_IHB_TX_PORT;
+	isotp_opt.rx_id = ISOTP_IHB_RX_PORT;
 
 	/* Start the IS0-TP socket */
 	r = conn_can_isotp_create(&conn, &isotp_opt, can_num);
