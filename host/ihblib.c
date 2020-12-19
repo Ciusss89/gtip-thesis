@@ -819,9 +819,9 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 					 * to track the SKIN nodes that have
 					 * passed away.
 					 */
-					sk_nodes_ex_vect = (void *)malloc(sk_nodes_count);
+					sk_nodes_ex_vect = (void *)calloc(1, sk_nodes_count);
 					if (!sk_nodes_ex_vect){
-						fprintf(stderr, BOLDRED"[!] malloc fails\n"RESET);
+						fprintf(stderr, BOLDRED"[!] calloc fails\n"RESET);
 						r = -ENOMEM;
 						break;
 					}
