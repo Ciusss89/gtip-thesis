@@ -93,6 +93,21 @@ int ihb_isotp_close(void);
 int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready);
 
 /*
+ * ihb_isotp_send_validate() - validate the chunks before to sed .
+ *
+ * @data: pointer of the data which have to send
+ * @lenght: data block size
+ *
+ * If ihb have to send the same data types, the inputs will be verified only the
+ * first time because the data typess never changes.
+ *
+ * This function reduce number of check did on ihb_isotp_send_chunks
+ *
+ * Return 0 if all is well, negative number otherwise.
+ */
+int ihb_isotp_send_validate(const void *data, const size_t length);
+
+/*
  * ihb_isotp_send_chunks() - send chunks of data by iso-tp protocol.
  *
  * @data: pointer of the data which have to send

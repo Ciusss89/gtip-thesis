@@ -14,6 +14,8 @@
 #include "can/device.h"
 #include "xtimer.h"
 
+#define ISOTO_PAYLOAD_MAX 4095
+
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
@@ -115,12 +117,17 @@ err:
 	return r;
 }
 
+int ihb_isotp_send_validate(const void *data, const size_t length)
+{
+	if (!sck_ready || !data || length == 0 || length > ISOTO_PAYLOAD_MAX)
+		return -EINVAL;
+
+	return 0;
+}
+
 int ihb_isotp_send_chunks(const void *data, const size_t length)
 {
 	int r;
-
-	if (!sck_ready || !data || length == 0)
-		return -EAGAIN;
 
 	DEBUG("[#] Chunk=%ubytes, data addr=%p\n", length, data);
 

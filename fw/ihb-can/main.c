@@ -56,6 +56,14 @@ static void _start_isotp_tx(void)
 		       &(IHB->can_isotp_ready));
 
 	/* Send the ihb-info as first chunk */
+	if (ihb_isotp_send_validate(&IHB->ihb_info, sizeof(struct ihb_node_info)) != 0) {
+		IHB->can_isotp_ready = false;
+		ihb_isotp_close();
+		puts("[!] ihb: pid_skin_handler is undef or not sleeping");
+		state_event(FAIL);
+		return;
+	}
+
 	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info)) > 0) {
 		IHB->can_isotp_ready = true;
 		

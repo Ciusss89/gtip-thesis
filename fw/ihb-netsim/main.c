@@ -97,6 +97,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 	for (i = 0; i < SK_N_S; i++)
 		sk[i].address = i;
 
+
 	while (true) {
 
 		/* Fill entries with fake data */
@@ -155,6 +156,11 @@ int ihb_init_netsimulator(struct ihb_ctx *ihb_ctx)
 
 	/* Initialize speudo_random*/
 	random_init(13);
+
+#ifdef MODULE_IHBCAN
+	if (!ihb_isotp_send_validate(sk, skins_buffer_len))
+		return -1;
+#endif
 
 	return thread_create(skin_sim_stack,
 				sizeof(skin_sim_stack),
