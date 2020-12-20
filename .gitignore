@@ -1,7 +1,9 @@
 # Riot-os build dir
 fw/bin
 
-# Frontend:  object/Lib files
-host/frontend/*.o
-host/frontend/.obj
-host/frontend/.lo
+#ihbtol bin
+../host/ihbtool
+
+*.o
+*.obj
+*.lo
