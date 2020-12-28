@@ -21,7 +21,7 @@
 #include "can/device.h"
 #include "can/can.h"
 
-#define ENABLE_DEBUG    (0)
+#define ENABLE_DEBUG 0
 #include "debug.h"
 
 #include "ihb-tools/tools.h"
@@ -30,7 +30,7 @@
 #include "ihb.h"
 
 #define CAN_THREAD_HELP "ihb-can thread"
-#define RCV_TIMEOUT	(2000U * US_PER_MS)	/* socket rcv timeout */
+#define RCV_TIMEOUT (2000U * US_PER_MS)	/* socket raw CAN rcv timeout */
 
 #if CAN_SPEED == 0
 #define SPEED 1000000 /*1MiB*/
@@ -55,32 +55,37 @@ static void _start_isotp_tx(void)
 		       ISOTP_TIMEOUT_DEF,
 		       &(IHB->can_isotp_ready));
 
-	/* Send the ihb-info as first chunk */
+	/* Validate the first chunk */
 	if (ihb_isotp_send_validate(&IHB->ihb_info, sizeof(struct ihb_node_info)) != 0) {
-		IHB->can_isotp_ready = false;
-		ihb_isotp_close();
-		puts("[!] ihb: pid_skin_handler is undef or not sleeping");
-		state_event(FAIL);
-		return;
+		puts("[!] ihb: isotp: failure on chunk validation");
+		goto err;
 	}
 
+	/* Send the IHB's infos as first chunk */
 	if (ihb_isotp_send_chunks(&IHB->ihb_info, sizeof(struct ihb_node_info)) > 0) {
+		/* Set connection ready */
 		IHB->can_isotp_ready = true;
-		
-		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
-			IHB->can_isotp_ready = false;
-			ihb_isotp_close();
-			puts("[!] ihb: pid_skin_handler is undef or not sleeping");
-			state_event(FAIL);
-			return;
-		}
 
+		/* Wake up the thread */
+		if (thread_wakeup(IHB->pid_skin_handler) != 1) {
+			puts("[!] ihb: cannot start the skin thread");
+			goto err;
+		}
 		puts("[*] ihb: node is sending data");
+
 	} else {
-		/* !TODO: Handle this patch code */
-		ihb_isotp_close();
-		state_event(FAIL);
+		puts("[!] ihb: cannot send the node info");
+		goto err;
 	}
+
+	return;
+
+err:
+	IHB->can_isotp_ready = false;
+	ihb_isotp_close();
+	state_event(FAIL);
+	puts("[!] ihb: failure");
+	return;
 }
 
 static bool _raw_init(conn_can_raw_t *socket,
@@ -146,8 +151,8 @@ static void _raw_frame_analize(struct can_frame *frame)
 		 *                   ||
 		 *        LSBytes[0] ┘└ LSBytes[1]
 		 *
-		 * Fix runtime the addressing, last byte contains the new
-		 * frame identifier which must be used
+		 * Fix runtime the CAN identifier, last byte contains the new
+		 * frame identifier which must be used by the node
 		 */
 		if (memcmp(&add_fix, frame->data, 7) == 0) {
 			printf("[*] IHB CAN id received, NEW=%#x, OLD=%#x\n",
@@ -395,7 +400,7 @@ int ihb_init_can(struct ihb_ctx *ihb_ctx)
 
 	if(_controller_probe() != 0) {
 		/* this should never happened */
-		puts("[!] cannot binding the can controller");
+		puts("[!] cannot bind the can controller");
 		return -1;
 	}
 	

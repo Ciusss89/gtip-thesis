@@ -1,6 +1,9 @@
 /**
  * Author:	Giuseppe Tipaldi
  * Created:	2020
+ *
+ * Documentation:
+ * https://readthedocs.org/projects/can-isotp/downloads/pdf/stable/
  **/
 #define _GNU_SOURCE
 
@@ -14,7 +17,10 @@
 #include "can/device.h"
 #include "xtimer.h"
 
-#define ISOTO_PAYLOAD_MAX 4095
+/*
+ * TODO: If CAN's payload exceeds the maxinum value, we have to split the it..
+ */
+#define ISOTP_PAYLOAD_MAX 4095
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -22,14 +28,13 @@
 #include "ihb-tools/tools.h"
 #include "can.h"
 
+static bool socket_configured = false;
+static bool *socket_ready = NULL;
+
 static bool snd_chunk_fails = false;
-static bool sck_ready = false;
 static conn_can_isotp_t conn;
 static uint8_t isotp_timeout;
 static uint32_t first_fail;
-
-/* It's isotp_ready of struct ihb_can_perph */
-bool *ex_sck_ready = NULL;
 
 static void isotp_sender_watchdog(void)
 {
@@ -51,43 +56,46 @@ static void isotp_sender_watchdog(void)
 	DEBUG("[#] First Fail=%"PRIu32" - Curr Fail=%"PRIu32": Diff=%"PRIu32"\n",
 	       first_fail, curr_fail, diff);
 
-	if(diff > (uint32_t)isotp_timeout) {
+	if (diff > (uint32_t)isotp_timeout) {
 		ihb_isotp_close();
 		puts("[!] isotp shoutdown by watchdog");
 	}
 }
 
-int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *ready)
+int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *isotp_ready)
 {
-	/* struct isotp_fc_options *fc_opt; */
-	struct isotp_options isotp_opt;
+	struct isotp_options isotp_opt = {0};
 	int r;
 
-	if (sck_ready)
+	if (socket_configured)
 		return -EALREADY;
 
-	ex_sck_ready = ready;
+	socket_ready = isotp_ready;
 
 	isotp_timeout = conn_timeout;
 
-	/* setup the socket */
-	memset(&isotp_opt, 0, sizeof(isotp_opt));
+	/* Configure the socket */
 	isotp_opt.tx_id = ISOTP_IHB_TX_PORT;
 	isotp_opt.rx_id = ISOTP_IHB_RX_PORT;
 
 	/* Start the IS0-TP socket */
 	r = conn_can_isotp_create(&conn, &isotp_opt, can_num);
-	if(r < 0) {
+	if (r < 0) {
+
 		printf("[!] cannot create the CAN socket: err=%d\n", r);
 		goto err;
-	} else if(r == 0) {
+
+	} else if (r == 0) {
+		
 		r = conn_can_isotp_bind(&conn, NULL);
-		if(r < 0) {
+		
+		if (r < 0) {
 			printf("[!] cannot bind the CAN socket: err=%d\n", r);
 			goto err;
 		}
-		sck_ready = true;
-		DEBUG("[#] The IS0-TP socket has been stared\n");
+
+		socket_configured = true;
+		DEBUG("[#] The IS0-TP socket has been configured\n");
 	}
 
 err:
@@ -99,27 +107,28 @@ int ihb_isotp_close(void)
 
 	int r;
 
-	if (!sck_ready)
+	if (!socket_configured)
 		return -EAGAIN;
 
 	/* Close the IS0-TP socket */
 	r = conn_can_isotp_close(&conn);
-	if(r < 0) {
+	if (r < 0) {
 		printf("[!] cannot close the CAN socket: err=%d\n", r);
 		goto err;
 	}
 
 	DEBUG("[#] The IS0-TP socket has been closed\n");
-	sck_ready = false;
-	*ex_sck_ready = false;
+	socket_configured = false;
+	*socket_ready = false;
 	state_event(FAIL);
+
 err:
 	return r;
 }
 
 int ihb_isotp_send_validate(const void *data, const size_t length)
 {
-	if (!sck_ready || !data || length == 0 || length > ISOTO_PAYLOAD_MAX)
+	if (!socket_configured || !data || length == 0 || length > ISOTP_PAYLOAD_MAX)
 		return -EINVAL;
 
 	return 0;
@@ -136,13 +145,13 @@ int ihb_isotp_send_chunks(const void *data, const size_t length)
 	 */
 	r = conn_can_isotp_send(&conn, data, length, 0);
 
-	if(r < 0) {
+	if (r < 0) {
 		isotp_sender_watchdog();
 		printf("[!] iso-tp send failure: err=%d\n", r);
 		goto err;
 	}
 
-	if(r > 0 && (size_t)r != length) {
+	if ((size_t)r != length) {
 		printf("[!] iso-tp short send: sent %d/%ubytes\n", r, length);
 		goto err;
 	}
@@ -151,7 +160,7 @@ int ihb_isotp_send_chunks(const void *data, const size_t length)
 	 * Reset the watchdog if has been triggered but the isotp connection
 	 * is still working.
 	 */
-	if(snd_chunk_fails)
+	if (snd_chunk_fails)
 		snd_chunk_fails = false;
 
 	DEBUG("[#] The iso-tp chunk has been sent\n");

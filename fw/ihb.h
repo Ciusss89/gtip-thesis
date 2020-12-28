@@ -14,12 +14,12 @@
 
 /* Set the tx port for ISO TP transmissions */
 #ifndef ISOTP_IHB_TX_PORT
-#define ISOTP_IHB_TX_PORT 0x700
+#define ISOTP_IHB_TX_PORT 0x100
 #endif
 
 /* Set the rx port for ISO TP transmissions */
 #ifndef ISOTP_IHB_RX_PORT
-#define ISOTP_IHB_RX_PORT 0x708
+#define ISOTP_IHB_RX_PORT 0x101
 #endif
 
 /* SK_T_S: Skin Taxel sensors per skin node */
