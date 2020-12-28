@@ -5,7 +5,7 @@ _fail () {
 	echo -e "\n[!] Err: $1"
 	if [ $2 -eq 1 ]; then
 		echo -e "check the err and try again\n"
-		return -1;
+		exit;
 	fi
 }
 
