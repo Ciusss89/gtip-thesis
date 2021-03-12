@@ -18,9 +18,9 @@
 #include "xtimer.h"
 
 /*
- * TODO: If CAN's payload exceeds the maxinum value, we have to split the it..
+ * TODO: If CAN's payload exceeds the maxinum PDU value, we have to split the it..
  */
-#define ISOTP_PAYLOAD_MAX 4095
+#define ISOTP_PDU_MAX 4095
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -128,7 +128,7 @@ err:
 
 int ihb_isotp_send_validate(const void *data, const size_t length)
 {
-	if (!socket_configured || !data || length == 0 || length > ISOTP_PAYLOAD_MAX)
+	if (!socket_configured || !data || length == 0 || length > ISOTP_PDU_MAX)
 		return -EINVAL;
 
 	return 0;

@@ -262,10 +262,7 @@ try_again:
 				break;
 		}
 
-		/*
-		 * In the IDLE state, the _raw_frame_snd is not needed then set
-		 * the filter only one time (the first time)
-		 */
+		/* there is no need to excute_raw_frame_snd on the first run */
 		if (first_run) {
 			_raw_rcv_set_filter(&conn, filter);
 			first_run = false;

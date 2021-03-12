@@ -47,7 +47,7 @@ struct ihb_ctx *IHB = NULL;
 
 static void _usage(void)
 {
-	puts("SKIN nodes simulator:");
+	puts("SKIN patches simulator:");
 	printf("skin fail <#node> \t - set as expired the #node (0-%d)\n", SK_N_S - 1);
 	puts("skin start \t\t - wake up the thread");
 	puts("skin stop \t\t - sleep the thread");
@@ -100,7 +100,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 
 	while (true) {
 
-		/* Fill entries with fake data */
+		/* Fills all entries with fake data */
 		for(i = 0; i < SK_N_S; i++) {
 			/* Simulate a failure state */
 			if (sk[i].address == skin_fail_node) {
@@ -108,7 +108,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 				skin_fail_node = SKIN_MAX_COUNT;
 			}
 
-			/* Fake Taxels... */
+			/* spill fake data ... */
 			random_bytes((uint8_t *)&sk[i].data[0], skin_adc_payload);
 		}
 
@@ -134,7 +134,7 @@ void *skin_node_sim_thread(ATTR_UNUSED void *arg)
 			thread_sleep();
 
 		/*
-		 * You can add a delay if you needs it
+		 * You can add a delay if you need it
 		 * xtimer_usleep(WAIT_20ms);
 		 */
 	}
