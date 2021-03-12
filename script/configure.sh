@@ -30,6 +30,13 @@ _fail () {
 rm -rf /tmp/can-isotp/
 git clone https://github.com/hartkopp/can-isotp.git /tmp/can-isotp
 cd /tmp/can-isotp/
+
+## XXX: to make it working on fedora 33 which doesn't include this module
+ERR="#error No need to compile this out-of-tree driver! ISO-TP is part of Linux Mainline kernel since Linux 5.10."
+FIX="#warning No need to compile this out-of-tree driver! ISO-TP is part of Linux Mainline kernel since Linux 5.10."
+git checkout 06f4549cc38d
+sed -i "/$ERR/c$FIX" net/can/isotp.c
+
 make
 if [ \$? -eq 0 ]; then
 
