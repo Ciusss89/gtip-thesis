@@ -161,7 +161,7 @@ static void _raw_frame_analize(struct can_frame *frame)
 			if (frame->data[4] == LSBytes[0] &&
 			    frame->data[5] == LSBytes[1])
 				IHB->can_frame_id = frame->data[7];
-			state_event(RUNT_FIX);
+			state_event(COLLISION);
 			/* TODO: send ack to ihbtool */
 			return;
 		}
