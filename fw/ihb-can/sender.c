@@ -128,7 +128,7 @@ err:
 
 int ihb_isotp_send_validate(const void *data, const size_t length)
 {
-	if (!socket_configured || !data || length == 0 || length > ISOTP_PDU_MAX)
+	if (!socket_configured || !data || !length || length > ISOTP_PDU_MAX)
 		return -EINVAL;
 
 	return 0;
@@ -157,7 +157,7 @@ int ihb_isotp_send_chunks(const void *data, const size_t length)
 	}
 
 	/*
-	 * Reset the watchdog if has been triggered but the isotp connection
+	 * Reset the watchdog if it has been triggered but the isotp connection
 	 * is still working.
 	 */
 	if (snd_chunk_fails)
