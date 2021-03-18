@@ -4,7 +4,10 @@ APPLICATION = IHB.GTip
 
 ## Target
 #
-BOARD ?= nucleo-l476rg
+BOARD ?= native #nucleo-l476rg
+ifeq (native,$(BOARD))
+CFLAGS += BOARD_NATIVE
+endif
 
 ## This has to be the absolute path to the RIOT base directory:
 #
@@ -54,11 +57,8 @@ USEMODULE += conn_can
 USEMODULE += xtimer
 USEMODULE += random
 
-## Do not force FEATURES check for the native board
-ifneq ($(BOARD), native)
-  FEATURES_REQUIRED += periph_can
-  FEATURES_REQUIRED += periph_gpio_irq
-endif
+FEATURES_REQUIRED += periph_can
+FEATURES_REQUIRED += periph_gpio_irq
 
 ## Custom modules
 #
