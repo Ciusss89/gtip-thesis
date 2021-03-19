@@ -23,7 +23,7 @@
 #endif
 
 /* SK_T_S: Skin Taxel sensors per skin node */
-#define SK_T_S (12)
+#define SK_T_S (10)
 
 /* Each SPI bus can have almost 62 nodes */
 #define SKIN_MAX_COUNT  (62 * 4)
