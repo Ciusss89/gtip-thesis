@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	/* Open and inizializate the socket CAN */
 	r = ihb_init_socket_can(&can_soc_raw, perph);
 	if (r < 0)
-		goto _fail0;
+		goto _fail1;
 
 	/* Send wakeup to all IHBs on bus */
 	r = ihbs_wakeup(can_soc_raw);
@@ -227,6 +227,5 @@ _fail1:
 
 	ihbs_cleanup();
 
-_fail0:
 	return r;
 }

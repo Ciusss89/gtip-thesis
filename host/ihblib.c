@@ -488,19 +488,10 @@ int ihb_init_socket_can(int *can_soc_fd, const char *d)
 
 int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 {
-	static struct can_isotp_fc_options fcopts;
-	static struct can_isotp_options opts;
+	struct can_isotp_options opts;
 	struct sockaddr_can addr;
 
 	int r;
-
-	/*
-	 * !TODO: add tuning of the fc options:
-	 *
-	 * fcopts.bs =
-	 * fcopts.stmin =
-	 * fcopts.wftmax =
-	 */
 
 	*can_soc_fd = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP);
 	if (*can_soc_fd < 0) {
@@ -521,11 +512,6 @@ int ihb_init_socket_can_isotp(int *can_soc_fd, const char *d)
 		return -errno;
 	}
 
-	r = setsockopt(*can_soc_fd,
-		       SOL_CAN_ISOTP,
-		       CAN_ISOTP_RECV_FC,
-		       &fcopts,
-		       sizeof(fcopts));
 	if (r < 0) {
 		shutdown(*can_soc_fd, 2);
 		close(*can_soc_fd);

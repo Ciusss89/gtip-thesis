@@ -43,7 +43,7 @@ typedef enum {
 	WAKEUP = 0x0,
 	MASTER,
 	SLAVE,
-	RUNT_FIX,
+	COLLISION,
 	FIXED,
 	FAIL
 } fsm_event_t;

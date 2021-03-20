@@ -161,7 +161,7 @@ static void _raw_frame_analize(struct can_frame *frame)
 			if (frame->data[4] == LSBytes[0] &&
 			    frame->data[5] == LSBytes[1])
 				IHB->can_frame_id = frame->data[7];
-			state_event(RUNT_FIX);
+			state_event(COLLISION);
 			/* TODO: send ack to ihbtool */
 			return;
 		}
@@ -262,10 +262,7 @@ try_again:
 				break;
 		}
 
-		/*
-		 * In the IDLE state, the _raw_frame_snd is not needed then set
-		 * the filter only one time (the first time)
-		 */
+		/* there is no need to excute_raw_frame_snd on the first run */
 		if (first_run) {
 			_raw_rcv_set_filter(&conn, filter);
 			first_run = false;
@@ -331,11 +328,12 @@ void ihb_can_module_info(void)
 static int  _controller_probe(void)
 {
 	const char *raw_can = raw_can_get_name_by_ifnum(CAN_C);
-	int ret;
 
 	if (!raw_can || strlen(raw_can) > MAX_NAME_LEN)
 		goto err;
 
+/* On native is not possible to set/read bitrate */
+#ifndef BOARD_NATIVE
 	/*
 	 * Set the given bitrate/sample_point to the given controller
 	 *  - Maxinum controller speed is 1MiB.
@@ -345,9 +343,9 @@ static int  _controller_probe(void)
 	 *    The CAN-in-Automation user’s group makes recommendations of where the
 	 *    sample point should be for various bit rates: 87.5% the most common.
 	 */
-	ret = raw_can_set_bitrate(CAN_C, SPEED, 875);
-	if (ret != 0)
+	if (raw_can_set_bitrate(CAN_C, SPEED, 875))
 		goto err;
+#endif
 
 	/* Acquire controller info */
 	IHB->can_perh_id = CAN_C;

@@ -1,10 +1,13 @@
 ## App name
 #
-APPLICATION = IHB.GTip
+APPLICATION = CySkin-gt
 
 ## Target
 #
 BOARD ?= nucleo-l476rg
+ifeq (native,$(BOARD))
+CFLAGS += BOARD_NATIVE
+endif
 
 ## This has to be the absolute path to the RIOT base directory:
 #
@@ -18,7 +21,7 @@ CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tag --abbrev | cut -c 1-20)-$(sh
 #             (but there's a limit on the maxinum isotp payload which limit it to
 #             ~157.)
 #
-CFLAGS += -DSK_N_S=16
+CFLAGS += -DSK_N_S=12
 
 ## IHBCAN: Set the speed
 # 0 = 1MiB
@@ -54,11 +57,8 @@ USEMODULE += conn_can
 USEMODULE += xtimer
 USEMODULE += random
 
-## Do not force FEATURES check for the native board
-ifneq ($(BOARD), native)
-  FEATURES_REQUIRED += periph_can
-  FEATURES_REQUIRED += periph_gpio_irq
-endif
+FEATURES_REQUIRED += periph_can
+FEATURES_REQUIRED += periph_gpio_irq
 
 ## Custom modules
 #

@@ -18,9 +18,9 @@
 #include "xtimer.h"
 
 /*
- * TODO: If CAN's payload exceeds the maxinum value, we have to split the it..
+ * TODO: If CAN's payload exceeds the maxinum PDU value, we have to split the it..
  */
-#define ISOTP_PAYLOAD_MAX 4095
+#define ISOTP_PDU_MAX 4095
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -64,7 +64,8 @@ static void isotp_sender_watchdog(void)
 
 int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *isotp_ready)
 {
-	struct isotp_options isotp_opt = {0};
+	struct isotp_fc_options isotp_fc;
+	struct isotp_options isotp_opt;
 	int r;
 
 	if (socket_configured)
@@ -77,6 +78,10 @@ int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *isotp_ready)
 	/* Configure the socket */
 	isotp_opt.tx_id = ISOTP_IHB_TX_PORT;
 	isotp_opt.rx_id = ISOTP_IHB_RX_PORT;
+	/* Configure the Flow Control to send data fast as possible */
+	isotp_fc.bs = 0;
+	isotp_fc.stmin = 0x0;
+	isotp_fc.wftmax = 0;
 
 	/* Start the IS0-TP socket */
 	r = conn_can_isotp_create(&conn, &isotp_opt, can_num);
@@ -87,7 +92,7 @@ int ihb_isotp_init(uint8_t can_num, uint8_t conn_timeout, bool *isotp_ready)
 
 	} else if (r == 0) {
 		
-		r = conn_can_isotp_bind(&conn, NULL);
+		r = conn_can_isotp_bind(&conn, &isotp_fc);
 		
 		if (r < 0) {
 			printf("[!] cannot bind the CAN socket: err=%d\n", r);
@@ -128,7 +133,7 @@ err:
 
 int ihb_isotp_send_validate(const void *data, const size_t length)
 {
-	if (!socket_configured || !data || length == 0 || length > ISOTP_PAYLOAD_MAX)
+	if (!socket_configured || !data || !length || length > ISOTP_PDU_MAX)
 		return -EINVAL;
 
 	return 0;
@@ -157,7 +162,7 @@ int ihb_isotp_send_chunks(const void *data, const size_t length)
 	}
 
 	/*
-	 * Reset the watchdog if has been triggered but the isotp connection
+	 * Reset the watchdog if it has been triggered but the isotp connection
 	 * is still working.
 	 */
 	if (snd_chunk_fails)
