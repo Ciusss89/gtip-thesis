@@ -1,10 +1,10 @@
 ## App name
 #
-APPLICATION = IHB.GTip
+APPLICATION = CySkin-gt
 
 ## Target
 #
-BOARD ?= native #nucleo-l476rg
+BOARD ?= nucleo-l476rg
 ifeq (native,$(BOARD))
 CFLAGS += BOARD_NATIVE
 endif
@@ -21,7 +21,7 @@ CFLAGS += -DIHB_FW_VER=\"$(shell git describe --tag --abbrev | cut -c 1-20)-$(sh
 #             (but there's a limit on the maxinum isotp payload which limit it to
 #             ~157.)
 #
-CFLAGS += -DSK_N_S=16
+CFLAGS += -DSK_N_S=12
 
 ## IHBCAN: Set the speed
 # 0 = 1MiB
