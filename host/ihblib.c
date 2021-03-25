@@ -190,7 +190,7 @@ int ihb_setup(int s, uint8_t c_id_master, bool v)
 			}
 			free(cmd);
 
-			fprintf(stdout, "[*] Configuring the IHB node=%#x which ends whit %#x %s\n",
+			fprintf(stdout, "[*] Configuring the IHB node=%#x which ends with %#x %s\n",
 					ihb->canID,
 					ihb->uid_LSBytes[0],
 					ihb->best ? "as ACTIVE" : "as BACKUP");
@@ -334,7 +334,7 @@ static int ihb_add_new_node(struct ihb_node **out, struct can_frame fr,
 	ihb->canID = fr.can_id;
 	ihb->cnt = 0;
 
-	fprintf(stdout, "[*] IHB node=%#x which ending serial number with %#x has been added\n",
+	fprintf(stdout, "[*] IHB node=%#x with serial that ends with %#x has been added\n",
 			ihb->canID, ihb->uid_LSBytes[0]);
 
 	/* Assigned_canID is an array of 256 bool used to trak the canID */
@@ -735,7 +735,7 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 					ihb_isotp_perf(end_tv, start_tv, r, &buff, perf);
 
 					/* Update stdout */
-					fprintf(stdout, "\r[*] IHB is sending data: chunk=%ubytes counts=%d%s",
+					fprintf(stdout, "\r[*] IHB is sending data: PDU = %u bytes counts=%d%s",
 						r,
 						cnt,
 						buff);
@@ -819,6 +819,6 @@ int ihb_rcv_data(int fd, bool verbose, bool perf, bool running)
 	if (sk_nodes_ex_vect)
 		free(sk_nodes_ex_vect);
 
-	fprintf(stdout, "\n[!] Receiving data from IHB is ended.\n");
+	fprintf(stdout, "\n[!] IHB: data reception has ended.\n");
 	return r;
 }
