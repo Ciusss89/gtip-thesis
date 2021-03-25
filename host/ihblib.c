@@ -547,7 +547,6 @@ static void ihb_info_print(struct ihb_node_info *info)
 	printf("| IHB mcu arch    %s\n", info->mcu_arch);
 	printf("| IHB board uid   %s\n", info->mcu_uid);
 	printf("| IHB skin nodes  %d\n", info->skin_node_count);
-	printf("| SKIN tactiles   %d\n", info->skin_node_taxel);
 	printf("| ISO TP timeout  %u\n", info->isotp_timeo);
 	puts("*------------------------------------------------");
 }
