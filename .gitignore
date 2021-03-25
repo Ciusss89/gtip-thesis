@@ -2,7 +2,7 @@
 fw/bin
 
 #ihbtol bin
-../host/ihbtool
+host/ihbtool
 
 *.o
 *.obj
